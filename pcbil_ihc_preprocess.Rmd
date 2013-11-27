@@ -1,0 +1,292 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Exploration & Preprocessing
+===============================================================
+
+```{r}
+suppressMessages(require(pander))
+suppressMessages(require(lawstat))
+suppressMessages(require(nortest))
+suppressMessages(require(Amelia))
+suppressMessages(require(impute))
+```
+
+Dataset raw file
+```{r}
+myWorkDirectory <- "C:/Documents and Settings/3X0B/Skrivbord/"
+data_set_file_raw <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/raw/hcc_pcbil_raw.csv", sep="")
+imputedPcbilFileName  <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+```
+
+Importing dataset `r data_set_file_raw` ...
+```{r}
+
+pcbilDataRaw <- read.csv(file = data_set_file_raw, row.names = 39, colClasses= c(rep("numeric",38), rep("character",2)), na.strings = "?",quote="'" )
+```
+
+Creating working dataset...
+```{r}
+pcbilDataWork <- pcbilDataRaw
+```
+
+Processed dataset munging
+```{r}
+names(pcbilDataWork) <- tolower(names(pcbilDataWork))
+names(pcbilDataWork)[39] <- "clin_diagn"
+pcbilDataWork$clin_diagn <- as.factor(pcbilDataWork$clin_diagn)
+```
+
+Let's see how it look like now...
+```{r}
+head(pcbilDataWork[1:5])
+```
+
+Report basic dataset information
+```{r}
+dim(pcbilDataWork)
+names(pcbilDataWork)
+```
+
+Composition of the dataset's Y
+```{r}
+table(pcbilDataWork$clin_diagn)
+```
+
+Summary statistics - by marker and clinical diagnosis
+```{r}
+pcbilNames <- names(pcbilDataWork)
+
+
+shapiroErrCount <- 0
+loopCount <- 0
+for(a_markerName in pcbilNames[1:38]) {
+#  print("Init loop marker name")
+  tumourType <- c()
+	markerName <- c()
+	markerCount <- c()
+	markerMin <- c()
+	markerMean <- c()
+	markerMedian <- c()
+	markerMax <- c()
+	markerSd <- c()
+	markerVar <- c()
+	markerNAs <- c()
+  normTestPvs <- c()
+  
+  totalMarkerNAs <- 0
+
+#	print("Get summaries by group")
+  summaries <- tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, summary)
+	counts <- tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, length)
+	sds <- tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, sd, na.rm=T)
+	vars <- tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, var, na.rm=T)  
+  
+  normTests <- tryCatch(
+    {
+      tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, shapiro.test)
+      }, error = function(err) {
+            shapiroErrCount <- shapiroErrCount +1
+            tryCatch(
+              {
+            tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, cvm.test.test)
+            } , error = function(err) {
+              tapply(pcbilDataWork[, a_markerName], pcbilDataWork$clin_diagn, pearson.test)
+              })      
+      })
+
+  for(aTumourType in unique(pcbilDataWork$clin_diagn)) {
+       
+#		print(aTumourType)
+
+  		markerSummary <- summaries[aTumourType]
+  		markerSummary <-markerSummary[[1]]
+            
+  		tumourType <- c(tumourType, substr(aTumourType,1,5))
+  		markerName <- c(markerName, a_markerName)
+      mCount <- as.numeric(counts[[aTumourType]])
+  		markerCount <- c(markerCount, mCount)
+  		markerMin <- c(markerMin, markerSummary["Min."])
+  		markerMean <- c(markerMean, markerSummary["Mean"])
+  		markerMedian <- c(markerMedian, markerSummary["Median"])
+  		markerMax <- c(markerMax, markerSummary["Max."])
+  		markerSd <- c(markerSd, round(sds[[aTumourType]],2))
+  		markerVar <- c(markerVar, round(vars[[aTumourType]],2))
+      nasCount <- as.numeric(markerSummary["NA's"])
+      
+      if(!is.na(nasCount)) {
+        totalMarkerNAs <- totalMarkerNAs + nasCount
+      }
+      
+      nasPercent <- round((100/mCount)*nasCount ,0)
+  		markerNAs <- c(markerNAs, paste(nasPercent, " (", nasCount , ")", sep=""))
+      normTestPvs <- c(normTestPvs, normTests[aTumourType][[1]]$p.value)
+		
+#		print(tumourType)
+     }
+	
+    summaryDataFrame1 <- data.frame(Marker = markerName, Tumour = tumourType, n = markerCount, Min = markerMin, Mean = markerMean, Med = markerMedian, Max = markerMax, SD = markerSd, Var = markerVar)
+  summaryDataFrame2 <- data.frame(Marker = markerName, Tumour = tumourType, NAs = markerNAs, normTest = normTestPvs)
+  names(summaryDataFrame2)[3] <- "% NAs"
+  names(summaryDataFrame2)[4] <- "Norm test"
+	
+	#print(summaryDataFrame)
+	#kable(summaryDataFrame, format = "markdown")
+  pandoc.table(summaryDataFrame1, style="grid",split.tables=100, justify="right")
+  pandoc.table(summaryDataFrame2, style="grid",split.tables=100, justify="right")
+
+	print(a_markerName)
+  
+  totalPercentNAs <- (100/nrow(pcbilDataWork))*totalMarkerNAs
+  print(paste("Total amount of NAs: ", round(totalPercentNAs,0) , "% (", totalMarkerNAs , ")", sep=""))
+  
+  
+  # Test for homogeneity of variance
+  markerSubset <- pcbilDataWork[, c(a_markerName, "clin_diagn")] 
+  markerSubset <- markerSubset[complete.cases(markerSubset),]
+
+  print(levene.test(markerSubset[, 1], group= markerSubset[, 2]))
+  
+  loopCount <- loopCount +1
+  
+  #if(loopCount > 2) {
+  #  break
+  #}
+        
+}
+
+#print(paste("Number of errors in shapiro.test -> pearson: ", shapiroErrCount, sep=""))
+```
+Interpretation of normality tests (shapiro | cvm | pearson): p-value < 0.05 for some of the markers, wich rejects the null hypothesis of normally distributed marker scores (perclinical diagnosis). Non-parametric test shall be used for differential expression analysis.
+
+
+Interpretation of Levene's Test: p-value < 0.05 for some of the markers, wich rejects the null hypothesis of equality of variance between groups (clinical diagnosis). Welch's t-test shall be used for differential expression analys.
+
+Summary of missing values - per marker
+```{r}
+propmiss <- function(dataframe) {
+  m <- sapply(dataframe, function(x) {
+		data.frame(
+			nmiss=sum(is.na(x)), 
+			n=length(x), 
+			propmiss=round(sum(is.na(x))/length(x),2)
+		)
+	})
+	d <- data.frame(t(m))
+	d <- sapply(d, unlist)
+	d <- as.data.frame(d)
+	d$variable <- row.names(d)
+	row.names(d) <- NULL
+	d <- cbind(d[ncol(d)],d[-ncol(d)])
+	return(d[order(d$propmiss), ])
+}
+
+reportmiss <- function(dataframe) {
+  propMiss <- propmiss(dataframe)
+  print(propMiss)
+  totalNumValues <- dim(dataframe)[1] * (dim(dataframe)[2] - 1)
+  totalMissingValues <- sum(propMiss$nmiss)
+  return ( (100 / totalNumValues) * totalMissingValues  )
+}
+
+globalPropMissingValues <- reportmiss(pcbilDataWork)
+print(paste("Total % missing data in processed dataset: ", round(globalPropMissingValues, 0) , "%", sep=""))
+```
+
+Missing values - per row
+```{r}
+
+reportmissperrow <- function(dataframe) {
+
+  pads <- c()
+  numMissingValues <- c()
+  propMissingValues <- c()
+  
+  aRow <- 1
+  while(aRow <= nrow(dataframe)) {
+    pads <- c(pads, row.names(dataframe)[aRow])
+    numMissing <- sum(is.na(dataframe[aRow,]))
+    propMissingValues <- c(propMissingValues, round((100 / (dim(dataframe)[2] -1)) *numMissing,2))
+  	numMissingValues <- c(numMissingValues, numMissing)
+  	aRow <- aRow + 1
+  }
+  missingD <- data.frame(pad = pads, nmissing = numMissingValues, propmissing = propMissingValues, stringsAsFactors=F)
+  missingD$propmiss_interv <- cut(missingD$propmissing, c(0,10,20,30,40,50,60,70,80,90,100))
+  
+  print(table(missingD$propmiss_interv))
+  
+  return (subset(missingD, propmissing > 50)[, 1])
+}
+
+numCasesMissGreat50 <- reportmissperrow(pcbilDataWork)
+print(paste("Number of cases in work dataset with more than 50% missing data: ", length(numCasesMissGreat50), sep=""))
+```
+
+Amelia Missingness Map
+```{r fig.width=11, fig.height=8}
+missmap(pcbilDataWork)
+```
+
+Work proposal - remove before imputation those markers with > 40% missing values:
+ttf1, cd146, cd146_nucl, ngfr_str, calretinin, glypican_3, ezh2, synap, hbme1, mesothelin, hepatocyte
+
+Let's create the marker-filtered dataset
+```{r}
+pcbilColumnFilteredD <- subset(pcbilDataWork, select=-c(ttf1, cd146, cd146_nucl, ngfr_str, calretinin, glypican_3, ezh2, synap, hbme1, mesothelin, hepatocyte))
+```
+
+Check the new status of missing values in the marker-filtered dataset
+```{r fig.width=11, fig.height=8}
+globalFilteredPropMissingValues <- reportmiss(pcbilColumnFilteredD)
+print(paste("Total % missing data in filtered dataset: ", round(globalFilteredPropMissingValues, 0) , "%", sep=""))
+missmap(pcbilColumnFilteredD)
+```
+
+Filtering of markers with >40% missing data resulted in `r round(globalPropMissingValues - globalFilteredPropMissingValues, 0)`% improvement of global data coberture.
+
+Missing values in marker-filtered dataset - per row
+```{r}
+fCasesMissGreat50 <- reportmissperrow(pcbilColumnFilteredD)
+print(paste("Number of cases in filtered dataset with more than 50% missing data: ", length(fCasesMissGreat50), sep=""))
+print(fCasesMissGreat50)
+# a <- impute.knn(as.matrix(pcbilColumnFilteredD[1:27]))
+```
+
+Work proposal - remove before imputation those rows with > 50% missing values.
+```{r}
+pcbilRowColumnFilteredD <- pcbilColumnFilteredD[!rownames(pcbilColumnFilteredD) %in% fCasesMissGreat50, ]
+```
+
+Check the new status of missing values in the row- and marker-filtered dataset
+```{r fig.width=11, fig.height=8}
+globalFilteredPropMissingValues <- reportmiss(pcbilRowColumnFilteredD)
+print(paste("Total % missing data in row- and column-filtered dataset: ", round(globalFilteredPropMissingValues, 0) , "%", sep=""))
+missmap(pcbilRowColumnFilteredD)
+```
+
+Missing values in rown- and marker-filtered dataset - per row
+```{r}
+reportmissperrow(pcbilRowColumnFilteredD)
+```
+
+Filtering of markers with >40% and rows with >50% missing data resulted in `r round(globalPropMissingValues - globalFilteredPropMissingValues, 0)`% improvement of global data coberture.
+
+Finally, we're ready for KNN-based imputation
+```{r}
+imputedPcbil <- impute.knn(as.matrix(pcbilRowColumnFilteredD[1:27]))
+imputedPcbilD <- as.data.frame(imputedPcbil$data)
+```
+
+Check the new status of missing values in the row- and marker-filtered dataset
+```{r fig.width=11, fig.height=8}
+globalFilteredPropMissingValues <-reportmiss(imputedPcbilD)
+print(paste("Total % missing data in imputed dataset: ", round(globalFilteredPropMissingValues, 0) , "%", sep=""))
+missmap(imputedPcbilD)
+```
+
+Save imputed dataset
+```{r}
+imputedPcbilD$pad <- rownames(imputedPcbilD)
+write.csv(imputedPcbilD, imputedPcbilFileName, row.names=F, na="")
+```
+
+End of preprocessing :)
