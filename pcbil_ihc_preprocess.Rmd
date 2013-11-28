@@ -274,6 +274,7 @@ Finally, we're ready for KNN-based imputation
 ```{r}
 imputedPcbil <- impute.knn(as.matrix(pcbilRowColumnFilteredD[1:27]))
 imputedPcbilD <- as.data.frame(imputedPcbil$data)
+imputedPcbilD$clin_diag <- pcbilRowColumnFilteredD$clin_diagn
 ```
 
 Check the new status of missing values in the row- and marker-filtered dataset
