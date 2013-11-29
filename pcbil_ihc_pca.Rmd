@@ -1,0 +1,62 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+PCA
+===============================================================
+
+```{r}
+suppressMessages(require(FactoMineR))
+
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "C:/Documents and Settings/3X0B/Skrivbord/"
+data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+hccpcbil_pca_output <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputed_hccpcbil_PCA_output.csv", sep="")
+```
+
+Importing imputed dataset `r data_set_file_imputed` ...
+```{r}
+pcbilDataImputed <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
+```
+
+
+```{r fig.width=9, fig.height=8}
+outCont <- 1
+while(outCont <= 2) {
+  titleInit <- "HCC-PCBIL"
+  if(outCont == 2) {
+    pcbilDataImputed <- subset(pcbilDataImputed, pcbilDataImputed$clin_diag != "Hepatocellular Cancer")
+    pcbilDataImputed$clin_diag <- factor(pcbilDataImputed$clin_diag)
+    titleInit <- "PCBIL"
+    hccpcbil_pca_output <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputed_pcbil_PCA_output.csv", sep="")
+  }
+  pcbilDataImputed.PCA <- pcbilDataImputed[, c("ck5", "ck7", "ck17", "ck18", "ck19", "ck20", 
+     "vim", "muc1", "muc2", "muc5ac", "muc6", "berep4", "ema", "cea_m", "cea_p", "ca125", 
+     "ca19_9", "maspin", "wt1cyt", "cdx2", "p53", "p63", "ki67", "smad4", "chra", "cd56", "cd10",
+     "clin_diag")]
+  
+  res <- PCA(pcbilDataImputed.PCA , scale.unit=TRUE, ncp=5, quali.sup=c(28: 28), graph = FALSE)
+  
+  # Plot PCs
+  for(cont in 1:4) {
+  plot.PCA(res, axes=c(cont, cont+1), choix="ind", habillage=28, col.ind="black", col.ind.sup="blue", 
+     col.quali="magenta", label=c("ind.sup", "quali"),new.plot=TRUE, 
+     title= paste("  ", titleInit, " Immunoprofiling - PCA scores", sep=""))
+  
+  plot.PCA(res, axes=c(cont, cont+1), choix="var", new.plot=TRUE, col.var="black", 
+     col.quanti.sup="blue", label=c("var", "quanti.sup"), lim.cos2.var=0, 
+     title= paste("  ", titleInit, " Immunoprofiling - PCA loadings", sep=""))
+  }
+  
+  
+  write.infile(res$eig, file = hccpcbil_pca_output,append=FALSE)
+  write.infile(res$var, file = hccpcbil_pca_output,append=TRUE)
+  write.infile(res$ind, file = hccpcbil_pca_output,append=TRUE)
+  write.infile(res$quali.sup, file = hccpcbil_pca_output,append=TRUE)
+  write.infile(dimdesc(res, axes=1:5), file = hccpcbil_pca_output,append=TRUE)
+  remove(pcbilDataImputed.PCA)
+  outCont <- outCont + 1
+}
+```
+
