@@ -1,0 +1,44 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Unsupervised Hierarchical Cluster Analysis
+===============================================================
+
+```{r}
+suppressMessages(require(gplots))
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+```
+
+Importing imputed dataset `r data_set_file_imputed` ...
+```{r}
+pcbilDataImputed <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
+```
+
+```{r fig.width=15, fig.height=10}
+imputedMatrix <- t(as.matrix(pcbilDataImputed[, 1:27]))
+color.map <- function(clin_diag) { 
+  if (clin_diag == "Hepatocellular Cancer") {
+		"green"
+	} else if (clin_diag == "Intrahepatic Cholangiocarcinoma") {
+		"blue"
+	} else if (clin_diag == "Perihilary Ac") {
+		"yellow"
+	} else if (clin_diag == "Gallbladder Ac") {
+		"purple"
+	} else if (clin_diag == "Distal Bile Duct Ac") {
+		"deeppink"
+	} else if (clin_diag == "Pancreas Ac") {
+		"red"
+	} else if (clin_diag == "Ampulla Ac") {
+		"black"
+	} else {
+		"white"
+	} 
+}
+patientcolors <- unlist(lapply(pcbilDataImputed$clin_diag, color.map))
+heatmap.2(imputedMatrix, col=redgreen(75), scale="none", ColSideColors=patientcolors,key=TRUE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0)
+```
