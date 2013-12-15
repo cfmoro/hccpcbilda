@@ -5,6 +5,7 @@ Unsupervised Hierarchical Cluster Analysis
 
 ```{r}
 suppressMessages(require(gplots))
+suppressMessages(require(amap))
 ```
 
 File names: imputed dataset
@@ -18,12 +19,12 @@ Importing imputed dataset `r data_set_file_imputed` ...
 pcbilDataImputed <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
 ```
 
-Clustering and heapmap visualization - adapted from http://www2.warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/
-```{r fig.width=15, fig.height=10}
+Preparing for clustering...
+```{r}
 imputedMatrix <- t(as.matrix(pcbilDataImputed[, 1:27]))
 color.map <- function(clin_diag) { 
   if (clin_diag == "Hepatocellular Cancer") {
-		"green"
+  	"green"
 	} else if (clin_diag == "Intrahepatic Cholangiocarcinoma") {
 		"blue"
 	} else if (clin_diag == "Perihilary Ac") {
@@ -41,7 +42,12 @@ color.map <- function(clin_diag) {
 	} 
 }
 patientcolors <- unlist(lapply(pcbilDataImputed$clin_diag, color.map))
+```
 
+Clustering and heapmap visualizations - adapted from http://www2.warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/
+
+dist() & hclust()
+```{r fig.width=15, fig.height=10}
 distances <- c("manhattan", "euclidean", "maximum", "canberra", "binary", "minkowski")
 linkages <- c("ward", "single", "average", "complete", "mcquitty", "median", "centroid")
 cont <- 0
@@ -51,6 +57,19 @@ for(aDistance in distances) {
     heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=patientcolors,key= cont == 0, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) dist(x,method=aDistance), main= mainStr, hclustfun = function(x) hclust(x, method = aLinkage) )
     cont <- cont + 1
   }
-  }
+}
+```
 
+Dist() & hclust()
+```{r fig.width=15, fig.height=10}
+distances <- c("euclidean", "maximum", "manhattan", "canberra", "binary", "pearson", "abspearson", "correlation", "abscorrelation", "spearman", "kendall")
+linkages <- c("ward", "single", "average", "complete", "mcquitty", "median", "centroid")
+cont <- 0
+for(aDistance in distances) {
+  for(aLinkage in linkages) {
+    mainStr <- paste("Dist(", aDistance, "):", "hclust(",aLinkage, ")", sep="")
+    heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=patientcolors,key= cont == 0, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method=aDistance), main= mainStr, hclustfun = function(x) hclust(x, method = aLinkage) )
+    cont <- cont + 1
+  }
+}
 ```
