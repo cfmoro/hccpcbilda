@@ -1,0 +1,97 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Unsupervised Hierarchical Cluster Analysis - pValue
+===============================================================
+
+```{r}
+suppressMessages(require(gplots))
+suppressMessages(require(amap))
+suppressMessages(require(pvclust))
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+```
+
+Importing imputed dataset `r data_set_file_imputed` ...
+```{r}
+pcbilDataImputed <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
+```
+
+Preparing for clustering...
+```{r}
+imputedMatrix <- t(as.matrix(pcbilDataImputed[, 1:27]))
+color.map <- function(clin_diag) { 
+  if (clin_diag == "Hepatocellular Cancer") {
+    "green"
+  } else if (clin_diag == "Intrahepatic Cholangiocarcinoma") {
+		"blue"
+	} else if (clin_diag == "Perihilary Ac") {
+		"yellow"
+	} else if (clin_diag == "Gallbladder Ac") {
+		"purple"
+	} else if (clin_diag == "Distal Bile Duct Ac") {
+		"deeppink"
+	} else if (clin_diag == "Pancreas Ac") {
+		"red"
+	} else if (clin_diag == "Ampulla Ac") {
+		"black"
+	} else {
+		"white"
+	} 
+}
+patientcolors <- unlist(lapply(pcbilDataImputed$clin_diag, color.map))
+
+###################################
+## Function to Color Dendrograms ##
+###################################
+dendroCol <- function(dend=dend, keys=keys, xPar="edgePar", bgr="red", fgr="blue", pch=20, lwd=1, ...) {
+        if(is.leaf(dend)) {
+                myattr <- attributes(dend)
+                if(length(which(keys==myattr$label))==1){
+                  attr(dend, xPar) <- c(myattr$edgePar, list(lab.col=fgr, col=fgr, pch=pch, lwd=lwd))
+                	# attr(dend, xPar) <- c(attr$edgePar, list(lab.col=fgr, col=fgr, pch=pch))
+                } else {
+                	attr(dend, xPar) <- c(myattr$edgePar, list(lab.col=bgr, col=bgr, pch=pch, lwd=lwd))
+                }
+        }
+  return(dend)
+}
+# Usage: 
+# dend_colored <- dendrapply(dend, dendroCol, keys, xPar="edgePar", bgr="red", fgr="blue", pch=20) # use xPar="nodePar" to color tree labels
+# plot(dend_colored, horiz=T)
+```
+
+Clustering and heapmap visualizations - adapted from http://www2.warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/
+Dist() & hclust() - with clininical diagnoses in the side color bar
+```{r fig.width=15, fig.height=10}
+source("http://faculty.ucr.edu/~tgirke/Documents/R_BioCond/My_R_Scripts/my.colorFct.R") 
+hc <- hclust(Dist(t(imputedMatrix), method="pearson"), method="average") # Clusters rows by Pearson
+hr <- hclust(Dist(imputedMatrix, method="pearson"), method="average") # Clusters columns by Spearman
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", ColSideColors=patientcolors, density.info="none", trace="none")
+```
+
+Dist() & hclust() - with clustering cuts in the side color bar
+```{r fig.width=15, fig.height=10}
+mycl <- cutree(hc, h=max(hc$height)/2.2)
+mycolhc <- sample(rainbow(256))
+mycolhc <- mycolhc[as.vector(mycl)]
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", ColSideColors=mycolhc, density.info="none", trace="none")
+```
+
+Obtain significant clusters by pvclust bootstrap analysis: adapted from http://manuals.bioinformatics.ucr.edu/home/R_BioCondManual#R_clustering
+```{r fig.width=15, fig.height=10}
+pv2 <- pvclust(imputedMatrix, method.dist="uncentered", method.hclust="average", nboot=10)
+plot(pv2, hang=-1)
+pvrect(pv2, alpha=0.95)
+
+clsig <- unlist(pvpick(pv2, alpha=0.90, pv="au", type="geq", max.only=TRUE)$clusters) 
+dend_colored <- dendrapply(as.dendrogram(pv2$hclust), dendroCol, keys=clsig, xPar="edgePar", bgr="black", fgr="red", pch=20)
+
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=dend_colored, col=greenred(100), scale="none", ColSideColors=patientcolors, density.info="none", trace="none") 
+
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=dend_colored, col=greenred(100), scale="none", ColSideColors=mycolhc, density.info="none", trace="none") 
+
+```

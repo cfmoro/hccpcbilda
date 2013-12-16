@@ -1,0 +1,68 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Unsupervised Hierarchical Cluster Analysis - pValue
+===============================================================
+
+```{r}
+suppressMessages(require(gplots))
+suppressMessages(require(amap))
+suppressMessages(require(pvclust))
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+```
+
+Importing imputed dataset `r data_set_file_imputed` ...
+```{r}
+pcbilDataImputed <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
+```
+
+Preparing for clustering...
+```{r}
+imputedMatrix <- t(as.matrix(pcbilDataImputed[, 1:27]))
+color.map <- function(clin_diag) { 
+  if (clin_diag == "Hepatocellular Cancer") {
+    "green"
+	} else if (clin_diag == "Intrahepatic Cholangiocarcinoma") {
+		"blue"
+	} else if (clin_diag == "Perihilary Ac") {
+		"yellow"
+	} else if (clin_diag == "Gallbladder Ac") {
+		"purple"
+	} else if (clin_diag == "Distal Bile Duct Ac") {
+		"deeppink"
+	} else if (clin_diag == "Pancreas Ac") {
+		"red"
+	} else if (clin_diag == "Ampulla Ac") {
+		"black"
+	} else {
+		"white"
+	} 
+}
+patientcolors <- unlist(lapply(pcbilDataImputed$clin_diag, color.map))
+```
+
+Clustering and heapmap visualizations - adapted from http://www2.warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/
+Dist() & hclust()
+```{r fig.width=15, fig.height=10}
+distances <- c("pearson", "correlation", "euclidean", "manhattan") # 
+cont <- 0
+for(aDistance in distances) {
+  heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=patientcolors,key= (cont == 0), symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= aDistance), main= paste("Dist(", aDistance, "):", "hclust(","average", ")", sep=""), hclustfun = function(x) hclust(x, method = "average") )
+  cont <- cont + 1
+  }
+```
+
+pvclust - dendrograms
+```{r fig.width=19, fig.height=17}
+distances <- c("uncentered", "correlation", "euclidean","manhattan") # , 
+for(aDistance in distances) {
+  pvresult <- pvclust(imputedMatrix, method.dist=aDistance, method.hclust="average", nboot=1000) # 1000 for test, 10000 for final results
+  plot(pvresult)
+  pvrect(pvresult, alpha=0.95)  
+  seplot(pvresult)
+}
+```
