@@ -1,0 +1,23 @@
+Title
+========================================================
+
+
+```{r}
+suppressMessages(require(multtest))
+```
+
+
+
+```{r}
+m <- MTP(X = t(pcbilDataImputed[1:27]), Y = pcbilDataImputed$clin_diag , test="f", robust=TRUE)
+print(m)
+summary(m)
+m@adjp <= 0.05
+##
+# limma 
+# my.df=as.data.frame(imputedMatrix)
+#M=my.df
+# MA <- new("MAList",list(M=M))
+
+```
+

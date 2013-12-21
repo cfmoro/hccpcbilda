@@ -1,0 +1,135 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Unsupervised Hierarchical Cluster Analysis - pValue
+===============================================================
+
+```{r}
+suppressMessages(require(gplots))
+suppressMessages(require(amap))
+suppressMessages(require(pvclust))
+suppressMessages(require(snowfall))
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+```
+
+Importing imputed dataset `r data_set_file_imputed` ...
+```{r}
+pcbilDataImputed <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
+```
+
+Preparing for clustering...
+```{r}
+imputedMatrix <- t(as.matrix(pcbilDataImputed[, 1:27]))
+color.map <- function(clin_diag) { 
+  if (clin_diag == "Hepatocellular Cancer") {
+    "green"
+  } else if (clin_diag == "Intrahepatic Cholangiocarcinoma") {
+                "blue"
+        } else if (clin_diag == "Perihilary Ac") {
+                "yellow"
+        } else if (clin_diag == "Gallbladder Ac") {
+                "purple"
+        } else if (clin_diag == "Distal Bile Duct Ac") {
+                "deeppink"
+        } else if (clin_diag == "Pancreas Ac") {
+                "red"
+        } else if (clin_diag == "Ampulla Ac") {
+                "black"
+        } else {
+                "white"
+        } 
+}
+patientcolors <- unlist(lapply(pcbilDataImputed$clin_diag, color.map))
+
+###################################
+## Function to Color Dendrograms ##
+###################################
+dendroCol <- function(dend=dend, keys=keys, xPar="edgePar", bgr="red", fgr="blue", pch=20, lwd=1, ...) {
+        if(is.leaf(dend)) {
+                myattr <- attributes(dend)
+                if(length(which(keys==myattr$label))==1){
+                  attr(dend, xPar) <- c(myattr$edgePar, list(lab.col=fgr, col=fgr, pch=pch, lwd=lwd))
+                        # attr(dend, xPar) <- c(attr$edgePar, list(lab.col=fgr, col=fgr, pch=pch))
+                } else {
+                        attr(dend, xPar) <- c(myattr$edgePar, list(lab.col=bgr, col=bgr, pch=pch, lwd=lwd))
+                }
+        }
+  return(dend)
+}
+# Usage: 
+# dend_colored <- dendrapply(dend, dendroCol, keys, xPar="edgePar", bgr="red", fgr="blue", pch=20) # use xPar="nodePar" to color tree labels
+# plot(dend_colored, horiz=T)
+```
+
+HUCA with pearson distance and average linkage - unordered dendrorams, colored by clinical diagnoses and by clusters of interest
+```{r fig.width=15, fig.height=10}
+hc <- hclust(Dist(t(imputedMatrix), method="pearson"), method="average") 
+hr <- hclust(Dist(imputedMatrix, method="pearson"), method="average")
+
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", ColSideColors=patientcolors, density.info="none", trace="none")
+
+c25 <- c(
+                "red", # cl 1 - extrahep-ccc-tuc
+                "green4", 
+                "green1",
+                "blue1", # cl 4 - intrahep-ccc-tuc
+                "#FF7F00", # orange
+                "blueviolet", # cl 6 - intest-diff-tuc
+                "gold1",
+                "skyblue2",
+                "#FB9A99", # lt pink
+                "palegreen2",
+                "#CAB2D6", # lt purple
+                "dodgerblue2",                
+                "#FDBF6F", # lt orange                              
+                "gray70",
+                "khaki2",
+                "maroon",
+                "orchid1",
+                "deeppink1",
+                "#E31A1C", # red
+                "steelblue4",
+                "darkturquoise",
+                "green1",
+                "yellow4",
+                "yellow3",
+                "darkorange4",
+                "brown")
+
+mycl <- cutree(hc, h=max(hc$height)/2.2)
+mycolhc <- c25
+mycolhc <- mycolhc[as.vector(mycl)]
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", ColSideColors=mycolhc, density.info="none", trace="none")
+
+
+
+#mycolhc <- c25 # sample(rainbow(256))
+#mycolhc <- mycolhc[as.vector(mycl)]
+#heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=mycolhc,key= FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= "pearson"), main= paste("Dist(pearson):", "hclust(average)", sep=""), hclustfun = function(x) hclust(x, method = "average") )
+#hm <- heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=patientcolors,key= FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= "pearson"), main= paste("Dist(pearson):", "hclust(average)", sep=""), hclustfun = function(x) hclust(x, method = "average") )
+#hc <- as.hclust(hm$colDendrogram)
+
+table(mycl)
+```
+
+Obtain significant clusters by pvclust bootstrap analysis: adapted from http://manuals.bioinformatics.ucr.edu/home/R_BioCondManual#R_clustering
+```{r fig.width=15, fig.height=10}
+cl <- makeCluster(2)
+pv2 <- parPvclust(cl, imputedMatrix, method.dist="uncentered", method.hclust="average", nboot=100)
+plot(pv2, hang=-1)
+pvrect(pv2, alpha=0.95)
+
+clsig <- unlist(pvpick(pv2, alpha=0.90, pv="au", type="geq", max.only=TRUE)$clusters) 
+dend_colored <- dendrapply(as.dendrogram(pv2$hclust), dendroCol, keys=clsig, xPar="edgePar", bgr="black", fgr="red", pch=20)
+
+heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=dend_colored, col=greenred(100), scale="none", ColSideColors=mycolhc, density.info="none", trace="none") 
+```
+
+Spectum of differentiation is reflected in the ordered version of UHCA
+```{r fig.width=15, fig.height=10}
+heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=mycolhc,key= FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= "pearson"), main= paste("Dist(pearson):", "hclust(average)", sep=""), hclustfun = function(x) hclust(x, method = "average") )
+```
