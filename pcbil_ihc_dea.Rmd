@@ -1,18 +1,81 @@
-Title
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Custering description & differential expression analysis
 ========================================================
 
 
 ```{r}
+suppressMessages(require(pander))
 suppressMessages(require(multtest))
 ```
 
+File names: clustered dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+```
 
+Importing clustered dataset `r clusteredPcbilFileName` ...
+```{r}
+pcbilDataClustered <- read.csv(file = clusteredPcbilFileName, row.names = 30, colClasses= c(rep("numeric",27), rep("factor",2), "character"), na.strings = "?",quote="\"" )
+```
 
 ```{r}
-m <- MTP(X = t(pcbilDataImputed[1:27]), Y = pcbilDataImputed$clin_diag , test="f", robust=TRUE)
-print(m)
-summary(m)
-m@adjp <= 0.05
+tblFun <- function(x, colName){
+    tbl <- table(x)
+    res <- cbind(tbl,round(prop.table(tbl)*100,2))
+    res.df <- cbind(rownames(res), as.data.frame(res))
+    rownames(res.df) <- NULL
+    colnames(res.df) <- c(colName, 'Count','Percentage')
+    res.df
+}
+```
+
+Clinical diagnoses - cluster membership
+```{r}
+for(clDg in unique(pcbilDataClustered$clin_diag)) {
+  print(clDg)  
+  clSummary <- tblFun(pcbilDataClustered[pcbilDataClustered$clin_diag == clDg, 29], 'cluster')
+  pandoc.table(clSummary, style="grid",split.tables=100, justify="right")
+}
+```                            
+
+Cluster composition
+```{r}
+for(clName in unique(pcbilDataClustered$cluster)) {
+  print(clName)  
+  clSummary <- tblFun(pcbilDataClustered[pcbilDataClustered$cluster == clName, 28], 'clin_diag')  
+  pandoc.table(clSummary, style="grid",split.tables=100, justify="right")
+}
+```                            
+
+```{r}
+diffDiagn1 <- c("extrahepatic-pcbil-tuc")
+diffDiagn2 <- c("intrahepatic-ccc-tuc")
+
+pcbilDExInTucs <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[1] | pcbilDataClustered$cluster == diffDiagn2[1])
+
+m <- MTP(X = t(pcbilDExInTucs[1:27]), Y = pcbilDExInTucs$cluster, test="t.twosamp.unequalvar", robust=TRUE)
+
+mresult <- data.frame(m@rawp[m@adjp <= 0.05], m@adjp[m@adjp <= 0.05])
+mresult <- cbind(rownames(mresult), mresult)
+meansDiffDiagn1 <- c()
+meansDiffDiagn2 <- c()
+meanDiffs <- c()
+for(marker in mresult[,1]) {
+  meansDiffDiagn1 <- c(meansDiffDiagn1, mean(pcbilDExInTucs[pcbilDExInTucs$cluster==diffDiagn1[1], marker]))
+  meansDiffDiagn2 <- c(meansDiffDiagn2, mean(pcbilDExInTucs[pcbilDExInTucs$cluster==diffDiagn2[1], marker]))
+}
+meanDiffs <- round((meansDiffDiagn1 - meansDiffDiagn2),2)
+mresult <- cbind(mresult, meansDiffDiagn1, meansDiffDiagn2, meanDiffs)
+colnames(mresult) <- c("marker", "raw-pval","adj-pval", "mean class 1", "mean class 2", "mean diffs")
+
+mresult <- mresult[order(-mresult[6]), ]
+rownames(mresult) <- NULL
+
+caption_str <- paste("class 1: ", diffDiagn1[1], " | class 2: ", diffDiagn2[1], sep="")
+pandoc.table(mresult, caption= caption_str, style="grid",split.tables=100, justify="right")
+
 ##
 # limma 
 # my.df=as.data.frame(imputedMatrix)
