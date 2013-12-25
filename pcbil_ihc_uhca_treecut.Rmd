@@ -12,6 +12,7 @@ File names: imputed dataset
 ```{r}
 myWorkDirectory <- "/home/bibu/workspace/"
 data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
 ```
 
 Importing imputed dataset `r data_set_file_imputed` ...
@@ -476,12 +477,12 @@ heatmap.3 <- function(x,
 
 ```{r}
 # multiple column and row
-mat <- matrix(1:100, byrow=T, nrow=10)
-column_annotation <- matrix(sample(c("red", "blue", "green"), 20, replace=T), ncol=2)
-colnames(column_annotation) <- c("Variable X1", "Variable X2")
+#mat <- matrix(1:100, byrow=T, nrow=10)
+#column_annotation <- matrix(sample(c("red", "blue", "green"), 20, replace=T), ncol=2)
+#colnames(column_annotation) <- c("Variable X1", "Variable X2")
  
  
-heatmap.3(mat, ColSideColors=column_annotation)
+#heatmap.3(mat, ColSideColors=column_annotation)
  
 ```
 
@@ -536,6 +537,7 @@ hc <- hclust(Dist(t(imputedMatrix), method="pearson"), method="average")
 hr <- hclust(Dist(imputedMatrix, method="pearson"), method="average")
 
 heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", ColSideColors=patientcolors, density.info="none", trace="none")
+
 
 
 
@@ -623,9 +625,41 @@ heatmap.3(imputedMatrix, col=greenred(100), scale="none", key= FALSE, symkey=FAL
 ```
 
 Assign clusters to cases and save the new data frame
-```{r}
-pcbilDataImputed$cluster <- mycl
-table(pcbilDataImputed$cluster)
-table(pcbilDataImputed[pcbilDataImputed$cluster == 1, 28])
-pcbilDataImputed[pcbilDataImputed$cluster == 26, 28]
+```{r  fig.width=15, fig.height=10}
+parseClusters <- function(origCl) {
+  origCl[origCl == 1] <- 'extrahepatic-pcbil-tuc'
+	origCl[origCl == 2 | origCl == 3 | origCl == 8 | origCl == 9 | origCl == 11 | origCl == 12 | origCl == 14 | origCl == 16 | origCl == 24 | origCl == 26] <- 'hcc-tuc'
+	origCl[origCl == 4] <- 'intrahepatic-ccc-tuc'
+	origCl[origCl == 6] <- 'intestinal-tuc'
+	origCl[origCl == 5 | origCl == 7 | origCl == 10 | origCl == 13 | origCl == 15 | origCl == 17 | origCl == 18 | origCl == 19 | origCl == 20 | origCl == 21 | origCl == 22 | origCl == 23 | origCl == 25 | origCl == 27 | origCl == 28] <- 'intermediate-pcbil-tuc'
+	
+	origCl
+}
+
+parsedCl <- parseClusters(mycl)
+
+c5 <- c(
+                "extrahepatic-pcbil-tuc" = "red", # cl 1 - extrahep-ccc-tuc
+                "hcc-tuc" = "green1", # cl 2 - hcc
+                "intrahepatic-ccc-tuc" = "blue1", # cl 4 - intrahep-ccc-tuc
+                "intermediate-pcbil-tuc" = "black", # cl 5 - intermediate-group
+                "intestinal-tuc" = "blueviolet" # cl 6 - intest-diff-tuc                
+                )
+
+mycolhc3 <- c5
+mycolhc3 <- mycolhc3[as.vector(parsedCl)]
+
+column_annotation2 <- matrix(c(mycolhc3, mycolhc2), ncol=2)
+colnames(column_annotation2) <- c("Parsed clusters", "Original clusters")
+
+heatmap.3(imputedMatrix, col=greenred(100), scale="none", key= FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= "pearson"), main= paste("Dist(pearson):", "hclust(average)", sep=""), hclustfun = function(x) hclust(x, method = "average"), ColSideColors=column_annotation2)
+
+pcbilDataImputed$cluster <- parsedCl
 ```
+
+Save clusterd dataset
+```{r}
+pcbilDataImputed$pad <- rownames(pcbilDataImputed)
+write.csv(pcbilDataImputed, clusteredPcbilFileName, row.names=F, na="")
+```
+End of cluster analysis ;)
