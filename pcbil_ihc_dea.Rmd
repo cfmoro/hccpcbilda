@@ -1,12 +1,14 @@
 Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
 ===============================================================
-Custering description & differential expression analysis
+Clustering description & differential expression analysis
 ========================================================
 
 
 ```{r}
 suppressMessages(require(pander))
 suppressMessages(require(multtest))
+suppressMessages(require(RankProd))
+suppressMessages(require(samr))
 ```
 
 File names: clustered dataset
@@ -21,6 +23,8 @@ pcbilDataClustered <- read.csv(file = clusteredPcbilFileName, row.names = 30, co
 ```
 
 ```{r}
+alpha <- 0.001
+
 tblFun <- function(x, colName){
     tbl <- table(x)
     res <- cbind(tbl,round(prop.table(tbl)*100,2))
@@ -49,33 +53,54 @@ for(clName in unique(pcbilDataClustered$cluster)) {
 }
 ```                            
 
-```{r}
-diffDiagn1 <- c("extrahepatic-pcbil-tuc")
-diffDiagn2 <- c("intrahepatic-ccc-tuc")
+Differential expresion analysis - multtest
+```{r fig.width=11, fig.height=8}
+#diffDiagn1 <- c("intrahepatic-ccc-tuc")
+#diffDiagn2 <- c("hcc-tuc")
 
-pcbilDExInTucs <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[1] | pcbilDataClustered$cluster == diffDiagn2[1])
+diffDiagn1 <- c("extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc")
+diffDiagn2 <- c("intrahepatic-ccc-tuc", "intestinal-tuc", "hcc-tuc")
+seeds  <- c(1097695, 434343,12345)
+multtestResults <- list()
 
-m <- MTP(X = t(pcbilDExInTucs[1:27]), Y = pcbilDExInTucs$cluster, test="t.twosamp.unequalvar", robust=TRUE)
+cont <- 1
+while(cont <= length(diffDiagn1)){
 
-mresult <- data.frame(m@rawp[m@adjp <= 0.05], m@adjp[m@adjp <= 0.05])
-mresult <- cbind(rownames(mresult), mresult)
-meansDiffDiagn1 <- c()
-meansDiffDiagn2 <- c()
-meanDiffs <- c()
-for(marker in mresult[,1]) {
-  meansDiffDiagn1 <- c(meansDiffDiagn1, mean(pcbilDExInTucs[pcbilDExInTucs$cluster==diffDiagn1[1], marker]))
-  meansDiffDiagn2 <- c(meansDiffDiagn2, mean(pcbilDExInTucs[pcbilDExInTucs$cluster==diffDiagn2[1], marker]))
+  #if(cont == 3) {
+  #  bootn = 1000
+  #} else {
+  #  bootn = 1000
+  #}
+  
+  pcbilTucs <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[cont] | pcbilDataClustered$cluster == diffDiagn2[cont])
+  
+  m <- MTP(X = t(pcbilTucs[1:27]), Y = pcbilTucs$cluster, test="t.twosamp.unequalvar", robust=TRUE, seed = seeds[cont]) # , B = bootn
+  
+  plot(m)
+  
+  mresult <- data.frame(m@rawp[m@adjp <= alpha], m@adjp[m@adjp <= alpha])
+  mresult <- cbind(rownames(mresult), mresult)
+  meansDiffDiagn1 <- c()
+  meansDiffDiagn2 <- c()
+  meanDiffs <- c()
+  for(marker in mresult[,1]) {
+    meansDiffDiagn1 <- c(meansDiffDiagn1, mean(pcbilTucs[pcbilTucs$cluster==diffDiagn1[cont], marker]))
+    meansDiffDiagn2 <- c(meansDiffDiagn2, mean(pcbilTucs[pcbilTucs$cluster==diffDiagn2[cont], marker]))
+  }
+  meanDiffs <- round((meansDiffDiagn1 - meansDiffDiagn2),2)
+  mresult <- cbind(mresult, meansDiffDiagn1, meansDiffDiagn2, meanDiffs)
+  colnames(mresult) <- c("marker", "raw-pval","adj-pval", "mean class 1", "mean class 2", "mean diffs")
+  
+  mresult <- mresult[order(-mresult[6]), ]
+  rownames(mresult) <- NULL
+  
+  caption_str <- paste("class 1: ", diffDiagn1[cont], " | class 2: ", diffDiagn2[cont], sep="")
+  pandoc.table(mresult, caption= caption_str, style="grid",split.tables=100, justify="right")
+
+  multtestResults <- append(multtestResults, list(as.vector(mresult[,1])))
+  
+  cont <- cont + 1
 }
-meanDiffs <- round((meansDiffDiagn1 - meansDiffDiagn2),2)
-mresult <- cbind(mresult, meansDiffDiagn1, meansDiffDiagn2, meanDiffs)
-colnames(mresult) <- c("marker", "raw-pval","adj-pval", "mean class 1", "mean class 2", "mean diffs")
-
-mresult <- mresult[order(-mresult[6]), ]
-rownames(mresult) <- NULL
-
-caption_str <- paste("class 1: ", diffDiagn1[1], " | class 2: ", diffDiagn2[1], sep="")
-pandoc.table(mresult, caption= caption_str, style="grid",split.tables=100, justify="right")
-
 ##
 # limma 
 # my.df=as.data.frame(imputedMatrix)
@@ -84,3 +109,80 @@ pandoc.table(mresult, caption= caption_str, style="grid",split.tables=100, justi
 
 ```
 
+Differential expresion analysis - rankprod
+```{r fig.width=11, fig.height=8}
+diffDiagn1 <- c("extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc")
+diffDiagn2 <- c("intrahepatic-ccc-tuc", "intestinal-tuc", "hcc-tuc")
+seeds  <- c(1097695, 434343,12345)
+rankProdResults <- list()
+
+cont <- 1
+while(cont <= length(diffDiagn1)){
+
+  pcbilTucs <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[cont] | pcbilDataClustered$cluster == diffDiagn2[cont])
+    
+  subsetClasses <- pcbilTucs$cluster == diffDiagn1[cont]  
+  subsetClasses <- as.numeric(subsetClasses)
+  
+  RP.out <- RP(t(pcbilTucs[1:27]), subsetClasses, num.perm=100, logged=FALSE, plot=FALSE, rand=seeds[cont])
+  
+  plotRP(RP.out, cutoff= alpha)
+
+  tg <- topGene(RP.out,cutoff= alpha,method="pfp",logged=FALSE, gene.names=colnames(pcbilTucs)[1:27])
+  print(tg)
+  print(paste("class 1: ", diffDiagn1[cont], " | class 2: ", diffDiagn2[cont], sep=""))
+  
+  rankProdResults <- append(rankProdResults, list(c(rownames(tg[[1]]), rownames(tg[[2]]))))
+  
+  cont <- cont + 1
+}
+```
+
+
+Differential expresion analysis - sam
+```{r fig.width=11, fig.height=8}
+diffDiagn1 <- c("extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc")
+diffDiagn2 <- c("intrahepatic-ccc-tuc", "intestinal-tuc", "hcc-tuc")
+seeds  <- c(1097695, 434343,12345)
+samResults <- list()
+
+cont <- 1
+while(cont <= length(diffDiagn1)){
+
+  pcbilTucs <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[cont] | pcbilDataClustered$cluster == diffDiagn2[cont])
+    
+  subsetClasses <- pcbilTucs$cluster == diffDiagn1[cont]  
+  subsetClasses <- as.numeric(subsetClasses)
+  subsetClasses <- subsetClasses + 1
+  
+  samfit <- SAM(t(pcbilTucs[1:27]), subsetClasses, resp.type="Two class unpaired", testStatistic = "wilcoxon", regression.method= "ranks" ,nperms = 1000, genenames = colnames(pcbilTucs)[1:27], fdr.output= alpha)
+  
+  plot(samfit)
+  print(samfit)  
+  print(paste("class 1: ", diffDiagn1[cont], " | class 2: ", diffDiagn2[cont], sep=""))
+  
+  samResults <- append(samResults, list(c(samfit$siggenes.table$genes.up[,1], samfit$siggenes.table$genes.lo[,1])) )
+  
+  cont <- cont + 1
+}
+```
+
+Differential expresion analysis - common significant markers (intersection) in multtest + rankprod + sam 
+```{r}
+diffDiagn1 <- c("extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc")
+diffDiagn2 <- c("intrahepatic-ccc-tuc", "intestinal-tuc", "hcc-tuc")
+
+cont <- 1
+while(cont <= length(diffDiagn1)){
+  
+  temp <- intersect(multtestResults[[cont]], rankProdResults[[cont]])
+  final <- intersect(temp, samResults[[cont]])
+  
+  print(paste(diffDiagn1[cont], " vs ", diffDiagn2[cont], ":", sep=""))
+  print(final)
+  print("-------------------------------------------------------")
+  print("")
+    
+  cont <- cont + 1
+}
+```
