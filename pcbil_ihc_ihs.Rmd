@@ -1,0 +1,37 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Immunohistograms - for the resulting clusters and significant markers
+=====================================================================
+
+```{r}
+suppressMessages(require(ggplot2))
+```
+
+File names: clustered dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+```
+
+Importing clustered dataset `r clusteredPcbilFileName` ...
+```{r}
+pcbilDataClustered <- read.csv(file = clusteredPcbilFileName, row.names = 30, colClasses= c(rep("numeric",27), rep("factor",2), "character"), na.strings = "?",quote="\"" )
+```
+
+```{r}
+# "extrahepatic-pcbil-tuc vs intrahepatic-ccc-tuc":
+extraIntrahepPcbil <- c("maspin", "ca125", "cea_m", "muc5ac", "ck17", "p53", "cdx2", "cd56", "wt1cyt", "vim", "smad4")
+
+# "extrahepatic-pcbil-tuc vs intestinal-tuc":
+pcbilIntestinal <- c("ck7", "muc1", "muc5ac", "ck17", "muc2", "ck20", "cdx2")
+
+# "intrahepatic-ccc-tuc vs hcc-tuc":
+intrahepHCC <-  c("ck19", "berep4", "ck7",  "muc1", "ca19_9", "vim", "cea_p", "maspin", "wt1cyt", "smad4", "ki67", "cea_m")
+```
+
+```{r}
+vals <- pcbilDataClustered[, 7]
+vals <- cut(vals, c(-1, 0, 10, 85, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N', 'S', 'P', 'D'))
+```
+
+
