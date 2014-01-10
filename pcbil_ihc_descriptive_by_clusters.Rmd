@@ -1,0 +1,91 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Descriptive statistics - by cluster
+===============================================================
+
+```{r}
+suppressMessages(require(psych))
+suppressMessages(require(pander))
+suppressMessages(require(lawstat))
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+```
+
+Importing imputed dataset `r clusteredPcbilFileName` ...
+```{r}
+pcbilDataClustered <- read.csv(file = clusteredPcbilFileName, row.names = 30, colClasses= c(rep("numeric",27), rep("factor",2), "character"), na.strings = "?",quote="\"" )
+```
+
+Function definition
+```{r}
+tblFun <- function(x, colName){
+    tbl <- table(x)
+    res <- cbind(tbl,round(prop.table(tbl)*100,2))
+    res.df <- cbind(rownames(res), as.data.frame(res))
+    rownames(res.df) <- NULL
+    colnames(res.df) <- c(colName, 'Count','Percentage')
+    res.df
+}
+```
+
+Dataset overview
+```{r}
+head(pcbilDataClustered)
+dim(pcbilDataClustered)
+names(pcbilDataClustered)
+```
+
+Cluster sizes
+```{r}
+table(pcbilDataClustered$cluster)
+```
+
+Cluster composition - by clinical diagnoses
+```{r}
+for(clName in unique(pcbilDataClustered$cluster)) {
+  print(clName)  
+  clSummary <- tblFun(pcbilDataClustered[pcbilDataClustered$cluster == clName, 28], 'clin_diag')  
+  pandoc.table(clSummary, style="grid",split.tables=100, justify="right")
+}
+```                            
+
+Clinical diagnoses - cluster membership
+```{r}
+for(clDg in unique(pcbilDataClustered$clin_diag)) {
+  print(clDg)  
+  clSummary <- tblFun(pcbilDataClustered[pcbilDataClustered$clin_diag == clDg, 29], 'cluster')
+  pandoc.table(clSummary, style="grid",split.tables=100, justify="right")
+}
+```                            
+
+Summary statistics - by marker and cluster
+```{r}
+pcbilNames <- names(pcbilDataClustered)
+
+describeBy(pcbilDataClustered[1:27], pcbilDataClustered$cluster)
+```
+Intepretation of skew and kurtosis: skew > 3 and/or kurtosis > 10 for many markers, indicating non-normal distribution. Non-parametric tests shall be used in case of differential expression analys.
+
+Modified robust Brown-Forsythe Levene-type tests based on the absolute deviations from the
+  median - by marker and cluster
+```{r}
+markerNames <- c()
+pVals <- c()
+for(a_markerName in pcbilNames[1:27]) {
+  
+  # Test for homogeneity of variance
+  markerSubset <- pcbilDataClustered[, c(a_markerName, "cluster")]   
+  levResult <- levene.test(markerSubset[, 1], group= markerSubset[, 2])
+
+  markerNames <- c(markerNames, a_markerName)
+  pVals <- c(pVals, levResult$p.value)          
+  }
+summaryDF <- data.frame(Marker = markerNames, p.Val = pVals)
+names(summaryDF)[2] <- "p-value"
+pandoc.table(summaryDF, style="grid", justify="right")
+```
+Interpretation of Levene's Test: p-value < 0.05 for most of markers, wich rejects the null hypothesis of equality of variance between groups (clusters). Non-parametric tests shall be used for differential expression analys.

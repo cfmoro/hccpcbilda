@@ -1,0 +1,57 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Descriptive statistics - by clinical diagnoses
+===============================================================
+
+```{r}
+suppressMessages(require(psych))
+suppressMessages(require(pander))
+suppressMessages(require(lawstat))
+```
+
+File names: imputed dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+```
+
+Importing imputed dataset `r data_set_file_imputed` ...
+```{r}
+pcbilDataWork <- read.csv(file = data_set_file_imputed, row.names = 29, colClasses= c(rep("numeric",27), "factor", "character"), na.strings = "?",quote="\"" )
+```
+
+Dataset overview
+```{r}
+head(pcbilDataWork)
+dim(pcbilDataWork)
+names(pcbilDataWork)
+table(pcbilDataWork$clin_diag)
+```
+
+Summary statistics - by marker and clinical diagnosis
+```{r}
+pcbilNames <- names(pcbilDataWork)
+
+describeBy(pcbilDataWork[1:27], pcbilDataWork$clin_diag)
+```
+Intepretation of skew and kurtosis: skew > 3 and/or kurtosis > 10 for several markers, indicating non-normal distribution. Non-parametric tests shall be used in case of differential expression analys.
+
+Modified robust Brown-Forsythe Levene-type tests based on the absolute deviations from the
+  median - by marker and clinical diagnosis
+```{r}
+markerNames <- c()
+pVals <- c()
+for(a_markerName in pcbilNames[1:27]) {
+  
+  # Test for homogeneity of variance
+  markerSubset <- pcbilDataWork[, c(a_markerName, "clin_diag")]   
+  levResult <- levene.test(markerSubset[, 1], group= markerSubset[, 2])
+
+  markerNames <- c(markerNames, a_markerName)
+  pVals <- c(pVals, levResult$p.value)          
+  }
+summaryDF <- data.frame(Marker = markerNames, p.Val = pVals)
+names(summaryDF)[2] <- "p-value"
+pandoc.table(summaryDF, style="grid", justify="right")
+```
+Interpretation of Levene's Test: p-value < 0.05 for most of markers, wich rejects the null hypothesis of equality of variance between groups (clinical diagnoses). Non-parametric tests shall be used in case of differential expression analys.
