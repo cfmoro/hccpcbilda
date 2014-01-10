@@ -48,19 +48,26 @@ patientcolors <- unlist(lapply(pcbilDataImputed$clin_diag, color.map))
 Clustering and heapmap visualizations - adapted from http://www2.warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/
 Dist() & hclust()
 ```{r fig.width=15, fig.height=10}
-distances <- c("pearson", "correlation", "euclidean", "manhattan") # 
+distances <- c("pearson", "correlation") # "euclidean", "manhattan", 
 cont <- 0
 for(aDistance in distances) {
   heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=patientcolors,key= (cont == 0), symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= aDistance), main= paste("Dist(", aDistance, "):", "hclust(","average", ")", sep=""), hclustfun = function(x) hclust(x, method = "average") )
   cont <- cont + 1
   }
+
+#hm <-heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=mycolhc,key= FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= aDistance), main= paste("Dist(", aDistance, "):", "hclust(","average", ")", sep=""), hclustfun = function(x) hclust(x, method = "average"), Colv=TRUE )
+#hc <- as.hclust( hm$colDendrogram )
+#mycl <- cutree(hc, h=max(hc$height)/2.5)
+#mycolhc <- sample(rainbow(256))
+#mycolhc <- mycolhc[as.vector(mycl)]
+#hm <-heatmap.2(imputedMatrix, col=greenred(100), scale="none", ColSideColors=mycolhc,key= FALSE, symkey=FALSE, density.info="none", trace="none", cexRow=1.0, cexCol= 0.4, distfun=function(x) Dist(x,method= aDistance), main= paste("Dist(", aDistance, "):", "hclust(","average", ")", sep=""), hclustfun = function(x) hclust(x, method = "average"), Colv=TRUE )
 ```
 
 pvclust - dendrograms
 ```{r fig.width=19, fig.height=17}
-distances <- c("uncentered", "correlation", "euclidean","manhattan") # , 
+distances <- c("uncentered", "correlation") # "manhattan", "euclidean", 
 for(aDistance in distances) {
-  pvresult <- pvclust(imputedMatrix, method.dist=aDistance, method.hclust="average", nboot=1000) # 1000 for test, 10000 for final results
+  pvresult <- pvclust(imputedMatrix, method.dist=aDistance, method.hclust="average", nboot=1000) # 1000 for test, 10000 for final result
   plot(pvresult)
   pvrect(pvresult, alpha=0.95)  
   seplot(pvresult)

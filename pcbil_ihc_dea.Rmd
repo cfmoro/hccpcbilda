@@ -22,36 +22,10 @@ Importing clustered dataset `r clusteredPcbilFileName` ...
 pcbilDataClustered <- read.csv(file = clusteredPcbilFileName, row.names = 30, colClasses= c(rep("numeric",27), rep("factor",2), "character"), na.strings = "?",quote="\"" )
 ```
 
+Alpha (cut-off) value for statistical significance
 ```{r}
 alpha <- 0.001
-
-tblFun <- function(x, colName){
-    tbl <- table(x)
-    res <- cbind(tbl,round(prop.table(tbl)*100,2))
-    res.df <- cbind(rownames(res), as.data.frame(res))
-    rownames(res.df) <- NULL
-    colnames(res.df) <- c(colName, 'Count','Percentage')
-    res.df
-}
 ```
-
-Clinical diagnoses - cluster membership
-```{r}
-for(clDg in unique(pcbilDataClustered$clin_diag)) {
-  print(clDg)  
-  clSummary <- tblFun(pcbilDataClustered[pcbilDataClustered$clin_diag == clDg, 29], 'cluster')
-  pandoc.table(clSummary, style="grid",split.tables=100, justify="right")
-}
-```                            
-
-Cluster composition
-```{r}
-for(clName in unique(pcbilDataClustered$cluster)) {
-  print(clName)  
-  clSummary <- tblFun(pcbilDataClustered[pcbilDataClustered$cluster == clName, 28], 'clin_diag')  
-  pandoc.table(clSummary, style="grid",split.tables=100, justify="right")
-}
-```                            
 
 Differential expresion analysis - multtest
 ```{r fig.width=11, fig.height=8}

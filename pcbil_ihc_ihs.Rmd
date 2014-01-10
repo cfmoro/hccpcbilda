@@ -5,6 +5,11 @@ Immunohistograms - for the resulting clusters and significant markers
 
 ```{r}
 suppressMessages(require(ggplot2))
+suppressMessages(require(gridExtra))
+suppressMessages(require(scales))
+suppressMessages(require(plyr))
+suppressMessages(require(reshape))
+
 ```
 
 File names: clustered dataset
@@ -29,9 +34,213 @@ pcbilIntestinal <- c("ck7", "muc1", "muc5ac", "ck17", "muc2", "ck20", "cdx2")
 intrahepHCC <-  c("ck19", "berep4", "ck7",  "muc1", "ca19_9", "vim", "cea_p", "maspin", "wt1cyt", "smad4", "ki67", "cea_m")
 ```
 
-```{r}
-vals <- pcbilDataClustered[, 7]
-vals <- cut(vals, c(-1, 0, 10, 85, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N', 'S', 'P', 'D'))
+Simple immunohistograms (impl A)
+```{r fig.width=12, fig.height=8}
+tClusters <- c("extrahepatic-pcbil-tuc", "intestinal-tuc", "intrahepatic-ccc-tuc", "hcc-tuc") # 
+markers <- c("ck7", "ck17", "ck19", "ck20", "vim", "muc1", "muc2", "muc5ac", "berep4", "ca19_9", "ca125", "cea_m", "cea_p", "maspin", "p53", "ki67", "cdx2", "cd56", "wt1cyt", "smad4")
+barCols <- c("red", "blueviolet", "blue", "green")
+
+contc <- 1
+for(aTCluster in tClusters) {
+  
+  pcbilTucs <- subset(pcbilDataClustered, pcbilDataClustered$cluster == aTCluster)
+  
+  for(aMarker in markers) {
+    
+    qvals <- pcbilTucs[, aMarker]    
+    qvals <- cut(qvals, c(-1, 0, 10, 85, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N', 'S', 'P', 'D'))
+    pcbilTucs[, aMarker] <- qvals
+    
+  }   
+  pcbilTucs <- pcbilTucs[, c(markers, 'cluster')]  
+  
+  
+  pcbilTucsLong <- melt(pcbilTucs, measure.vars= markers, variable_name="marker")
+  
+  pl0 <- ggplot(pcbilTucsLong, aes(x = value)) + 
+    geom_bar(aes(y = (..count..)/sum(..count..)), binwidth = 8, fill= barCols[contc]) +
+    facet_wrap( ~ marker, ncol=6) +
+    xlab("Immunohistochemical scores") +
+    ylab("% cases") +
+    ggtitle(paste("Immunohistogram - ", aTCluster, sep=""))
+      
+ labs <- cbind(c("% stained tumor cells", "N: 0%      ", "S: <10%  ", " P: 10-85%", "D: > 85% "))
+ g <- tableGrob(labs, gpar.coretext=gpar(fontsize=10), gpar.corefill=gpar(col="white")) # core.just="left" 
+    
+ grid.arrange(pl0, g, nrow=1, ncol=2, widths=(c(6,1)))
+  
+  contc <- contc + 1
+}
 ```
 
+Simple immunohistograms (impl B)
+```{r fig.width=12, fig.height=8}
+diffDiagn1 <- c("extrahepatic-pcbil-tuc", "intestinal-tuc", "intrahepatic-ccc-tuc", "hcc-tuc") # 
+diffDiagn2 <- c("intrahepatic-ccc-tuc", "extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc") # 
+diffMarkers <- c("ck7", "ck17", "ck19", "ck20", "vim", "muc1", "muc2", "muc5ac", "berep4", "ca19_9", "ca125", "cea_m", "cea_p", "maspin", "p53", "ki67", "cdx2", "cd56", "wt1cyt", "smad4")
+barCol <- c("red", "blueviolet", "blue", "green")
 
+cont <- 1
+while(cont <= length(diffDiagn1)){
+    
+    pcbilTucsQuantit <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[cont] | pcbilDataClustered$cluster == diffDiagn2[cont])
+    pcbilTucs <- pcbilTucsQuantit
+  
+  for(aMarker in diffMarkers) {
+    
+    qvals <- pcbilTucs[, aMarker]    
+    qvals <- cut(qvals, c(-1, 0, 10, 85, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N', 'S', 'P', 'D'))
+    pcbilTucs[, aMarker] <- qvals
+    
+  }
+   
+  pcbilTucs <- pcbilTucs[, c(diffMarkers, 'cluster')]  
+  #pcbilTucs$cluster <- as.factor(as.character(pcbilTucs$cluster))
+
+    # "extrahepatic-pcbil-tuc vs intrahepatic-ccc-tuc": "maspin", "ca125", "cea_m", "muc5ac", "ck17", "p53", "cdx2", "cd56", "wt1cyt", "vim", "smad4"
+      pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
+                             ck7p = round(prop.table(table(ck7)),2) *100,
+                             ck17p = round(prop.table(table(ck17)),2) * 100,
+                             ck19p = round(prop.table(table(ck19)),2) *100,
+                             ck20p = round(prop.table(table(ck20)),2) * 100,
+                             vimp = round(prop.table(table(vim)),2) * 100,
+                             muc1p = round(prop.table(table(muc1)),2) * 100,                    
+                             muc2p = round(prop.table(table(muc2)),2) * 100,
+                             muc5acp = round(prop.table(table(muc5ac)),2) * 100,
+                             berep4p = round(prop.table(table(berep4)),2) *100,
+                             ca19_9p = round(prop.table(table(ca19_9)),2) * 100,
+                             ca125p = round(prop.table(table(ca125)),2) * 100,
+                             cea_mp = round(prop.table(table(cea_m)),2) * 100,
+                             cea_pp = round(prop.table(table(cea_p)),2) * 100,                                                          
+                             maspinp = round(prop.table(table(maspin)),2) *100,
+                             p53p = round(prop.table(table(p53)),2) * 100,
+                             ki67p = round(prop.table(table(ki67)),2) * 100,                             
+                             cdx2p = round(prop.table(table(cdx2)),2) * 100,                             
+                             cd56p = round(prop.table(table(cd56)),2) * 100,
+                             wt1cytp = round(prop.table(table(wt1cyt)),2) * 100,                             
+                             smad4p = round(prop.table(table(smad4)),2) * 100,
+                             score_cats = names(table(ck7)))
+     
+    
+  pcbilTucsProp$score_cats <- factor(pcbilTucsProp$score_cats, levels = c('N', 'S', 'P', 'D'))
+
+  pcbilTucsLong <- melt(pcbilTucsProp, measure.vars= paste(diffMarkers, "p", sep="") , variable_name="marker")
+
+
+  pl1 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn1[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", fill= barCol[cont]) + facet_wrap( ~ marker, ncol=6) + xlab("Immunohistochemical scores") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn1[cont], sep=""))
+     
+ 
+ labs <- cbind(c("% stained tumor cells", "N: 0%      ", "S: <10%  ", " P: 10-85%", "D: > 85% "))
+ g <- tableGrob(labs, gpar.coretext=gpar(fontsize=10), gpar.corefill=gpar(col="white")) # core.just="left" 
+    
+    
+ grid.arrange(pl1, g, nrow=1, ncol=2, widths=(c(6,1)))
+        
+        
+  cont <- cont + 1
+}
+
+```
+
+Comparative immunohistograms
+```{r fig.width=12, fig.height=8}
+diffDiagn1 <- c("extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc") # 
+diffDiagn2 <- c("intrahepatic-ccc-tuc", "intestinal-tuc", "hcc-tuc") # 
+diffMarkers <- list(
+  c("ca125", "muc5ac", "cea_m", "ck17",  "cdx2",  "maspin",  "p53",  "cd56", "vim","wt1cyt",  "smad4"),
+  c("ck17", "muc1", "muc5ac", "ck7", "ck20", "muc2",  "cdx2"),
+  c("berep4", "ca19_9", "muc1", "ck19", "vim", "cea_m", "wt1cyt", "maspin", "ck7",     "smad4", "ki67", "cea_p")
+  )
+parsed_diffMarkers <- list(
+  c("CA125", "MUC5Ac", "mCEA", "CK17",  "CDX2",  "Maspin",  "p53",  "CD56", "Vim","WT1_cyt",  "SMAD4"),
+  c("CK17", "MUC1", "MUC5Ac", "CK7", "CK20", "MUC2",  "CDX2"),
+  c("BerEP4", "CA19_9", "MUC1", "CK19", "Vim", "mCEA", "WT1_cyt", "Maspin", "CK7",     "SMAD4", "Ki67", "pCEA")
+  )
+
+ncols <- c(4,4,4)
+
+cont <- 1
+while(cont <= length(diffDiagn1)){
+    
+    pcbilTucsQuantit <- subset(pcbilDataClustered, pcbilDataClustered$cluster == diffDiagn1[cont] | pcbilDataClustered$cluster == diffDiagn2[cont])
+    pcbilTucs <- pcbilTucsQuantit
+  
+  for(aMarker in diffMarkers[[cont]] ) {
+    
+    qvals <- pcbilTucs[, aMarker]    
+    qvals <- cut(qvals, c(-1, 0, 10, 85, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N', 'S', 'P', 'D'))
+    pcbilTucs[, aMarker] <- qvals
+    
+  }
+   
+  pcbilTucs <- pcbilTucs[, c(diffMarkers[[cont]], 'cluster')]  
+  #pcbilTucs$cluster <- as.factor(as.character(pcbilTucs$cluster))
+
+  if(cont == 1) {
+    # "extrahepatic-pcbil-tuc vs intrahepatic-ccc-tuc": "maspin", "ca125", "cea_m", "muc5ac", "ck17", "p53", "cdx2", "cd56", "wt1cyt", "vim", "smad4"
+      pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
+                             Maspin = round(prop.table(table(maspin)),2) *100,
+                             CA125 = round(prop.table(table(ca125)),2) * 100,
+                             mCEA = round(prop.table(table(cea_m)),2) * 100,
+                             MUC5Ac = round(prop.table(table(muc5ac)),2) * 100,
+                             CK17 = round(prop.table(table(ck17)),2) * 100,
+                             p53 = round(prop.table(table(p53)),2) * 100,
+                             CDX2 = round(prop.table(table(cdx2)),2) * 100,
+                             CD56 = round(prop.table(table(cd56)),2) * 100,
+                             WT1_cyt = round(prop.table(table(wt1cyt)),2) * 100,
+                             Vim = round(prop.table(table(vim)),2) * 100,
+                             SMAD4 = round(prop.table(table(smad4)),2) * 100,
+                             score_cats = names(table(maspin)))
+  } else if(cont == 2) {
+        # "extrahepatic-pcbil-tuc vs intestinal-tuc": "ck7", "muc1", "muc5ac", "ck17", "muc2", "ck20", "cdx2"
+        pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
+                             CK7 = round(prop.table(table(ck7)),2) *100,
+                             MUC1 = round(prop.table(table(muc1)),2) * 100,                    
+                             MUC5Ac = round(prop.table(table(muc5ac)),2) * 100,
+                             CK17 = round(prop.table(table(ck17)),2) * 100,
+                             MUC2 = round(prop.table(table(muc2)),2) * 100,
+                             CK20 = round(prop.table(table(ck20)),2) * 100,
+                             CDX2 = round(prop.table(table(cdx2)),2) * 100,
+                             score_cats = names(table(ck7)))    
+  } else if(cont == 3) {
+    # "intrahepatic-ccc-tuc vs hcc-tuc": "ck19", "berep4", "ck7",  "muc1", "ca19_9", "vim", "cea_p", "maspin", "wt1cyt", "smad4", "ki67", "cea_m"
+      pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
+                             CK19 = round(prop.table(table(ck19)),2) *100,
+                             BerEP4 = round(prop.table(table(berep4)),2) *100,
+                             CK7 = round(prop.table(table(ck7)),2) *100,
+                             MUC1 = round(prop.table(table(muc1)),2) * 100,
+                             CA19_9 = round(prop.table(table(ca19_9)),2) * 100,
+                             Vim = round(prop.table(table(vim)),2) * 100,
+                             pCEA = round(prop.table(table(cea_p)),2) * 100,                             
+                             Maspin = round(prop.table(table(maspin)),2) *100,
+                             WT1_cyt = round(prop.table(table(wt1cyt)),2) * 100,
+                             SMAD4 = round(prop.table(table(smad4)),2) * 100,
+                             Ki67 = round(prop.table(table(ki67)),2) * 100,
+                             mCEA = round(prop.table(table(cea_m)),2) * 100,                             
+                             score_cats = names(table(ck19)))    
+  }    
+    
+  pcbilTucsProp$score_cats <- factor(pcbilTucsProp$score_cats, levels = c('N', 'S', 'P', 'D'))
+
+  pcbilTucsLong <- melt(pcbilTucsProp, measure.vars= parsed_diffMarkers[[cont]], variable_name="marker")
+
+
+  pl1 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn1[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn1[cont], sep=""))
+    
+  pl2 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn2[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn2[cont], sep="")) 
+    
+  pl3 <- ggplot(pcbilTucsLong, aes(score_cats, value, fill=cluster)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") 
+    #+ ggtitle("Comparative immunohistogram")
+ 
+ 
+ labs <- cbind(c("% stained tumor cells", "N: 0%      ", "S: <10%  ", " P: 10-85%", "D: > 85% "))
+ g <- tableGrob(labs, gpar.coretext=gpar(fontsize=10), gpar.corefill=gpar(col="white")) # core.just="left" 
+    
+    
+ grid.arrange(pl3, g, nrow=1, ncol=2, widths=(c(6,1)))
+        
+        
+  cont <- cont + 1
+}
+
+```

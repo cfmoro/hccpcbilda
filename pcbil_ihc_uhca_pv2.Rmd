@@ -85,7 +85,7 @@ heatmap.2(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=gre
 Obtain significant clusters by pvclust bootstrap analysis: adapted from http://manuals.bioinformatics.ucr.edu/home/R_BioCondManual#R_clustering
 ```{r fig.width=15, fig.height=10}
 cl <- makeCluster(2)
-pv2 <- parPvclust(cl, imputedMatrix, method.dist="uncentered", method.hclust="average", nboot=10000)
+pv2 <- parPvclust(cl, imputedMatrix, method.dist="uncentered", method.hclust="average", nboot=25000)
 plot(pv2, hang=-1)
 pvrect(pv2, alpha=0.95)
 

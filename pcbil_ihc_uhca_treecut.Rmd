@@ -657,6 +657,24 @@ heatmap.3(imputedMatrix, col=greenred(100), scale="none", key= FALSE, symkey=FAL
 pcbilDataImputed$cluster <- parsedCl
 ```
 
+Expository figure
+```{r  fig.width=15, fig.height=10}
+c6 <- c(
+                "extrahepatic-pcbil-tuc" = "red", # cl 1 - extrahep-ccc-tuc
+                "hcc-tuc" = "green1", # cl 2 - hcc
+                "intrahepatic-ccc-tuc" = "blue1", # cl 4 - intrahep-ccc-tuc
+                "intermediate-pcbil-tuc" = "white", # cl 5 - intermediate-group
+                "intestinal-tuc" = "blueviolet" # cl 6 - intest-diff-tuc                
+                )
+
+mycolhc6 <- c6
+mycolhc6 <- mycolhc6[as.vector(parsedCl)]
+
+column_annotation <- matrix(c(mycolhc6, patientcolors), ncol=2)
+colnames(column_annotation) <- c("Tumour clusters",  "Clinical diagnoses")
+heatmap.3(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", density.info="none",  ColSideColors=column_annotation)
+```
+
 Save clusterd dataset
 ```{r}
 pcbilDataImputed$pad <- rownames(pcbilDataImputed)
