@@ -1,0 +1,30 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Anon to real PADs
+=================
+File names: clustered dataset
+```{r}
+myWorkDirectory <- "/home/bibu/workspace/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+anonPadsFilename <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/raw/hcc_pcbil_raw.anon", sep="")
+realPadsAllFilename <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/realPadsAllPcbil.csv", sep="")
+realPadsIntestinalFilename <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/realPadsIntestinalPcbil.csv", sep="")
+```
+
+Importing clustered dataset `r clusteredPcbilFileName` and anonimyzed PADs key file `r anonPadsFilename`...
+```{r}
+pcbilDataClustered <- read.csv(file = clusteredPcbilFileName,colClasses= c(rep("numeric",27), rep("factor",2), "character"), na.strings = "?",quote="\"" )
+anonPads <- read.csv(file = anonPadsFilename,colClasses= c(rep("character",2)), sep= "\t")
+```
+
+Merging datasets, subsetting and saving real pads for all cases and only for the intestinal tumour cluster
+```{r}
+realPadsPcbilD <- merge(pcbilDataClustered, anonPads)
+
+realPadsAll <- subset(realPadsPcbilD, select="real_pad")
+write.csv(realPadsAll, realPadsAllFilename, row.names=F, na="")
+
+realPadsIntestinal <- subset(realPadsPcbilD, cluster == "intestinal-tuc", select="real_pad")
+write.csv(realPadsIntestinal, realPadsIntestinalFilename, row.names=F, na="")
+```
+
