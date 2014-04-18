@@ -114,7 +114,9 @@ while(cont <= length(diffDiagn1)){
     
     pl1 <- ggplot(targetPcbilTucsLong, aes(marker, value)) + geom_bar(stat="identity", position="identity", fill= barCol[cont]) + facet_wrap( ~ marker_type, ncol=2, scales="free_x") + xlab("Markers") + ylab("% positive* cases") + ggtitle(paste("Immunohistogram - ",diffDiagn1[cont], sep=""))
      
- plot(pl1)
+  labs <- c("")
+  g <- tableGrob(labs, gpar.coretext = gpar(fontsize = 10), gpar.corefill = gpar(col = "white"))  # core.just='left' 
+    grid.arrange(pl1, g, nrow = 1, ncol = 2, widths = (c(6, 1)))
         
   cont <- cont + 1
 }
@@ -136,6 +138,8 @@ parsed_diffMarkers <- list(
   c("BerEP4", "CA19_9", "MUC1", "CK19", "Vim", "mCEA", "WT1_cyt", "Maspin", "CK7",     "SMAD4", "Ki67", "pCEA")
   )
 
+compBarCol <- list(c("red", "blue"), c("red", "blueviolet"), c("blue", "green"))
+
 ncols <- c(4,4,4)
 
 cont <- 1
@@ -147,72 +151,69 @@ while(cont <= length(diffDiagn1)){
   for(aMarker in diffMarkers[[cont]] ) {
     
     qvals <- pcbilTucs[, aMarker]    
-    qvals <- cut(qvals, c(-1, 0, 10, 85, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N', 'S', 'P', 'D'))
-    pcbilTucs[, aMarker] <- qvals
-    
+    qvalsCutted <- cut(qvals, c(-1, 10, 100), include.lowest=TRUE, ordered_result=TRUE, labels = c('N',  'P'))
+    pcbilTucs[, paste(aMarker, "_cutted", sep = "")] <- qvalsCutted        
   }
    
-  pcbilTucs <- pcbilTucs[, c(diffMarkers[[cont]], 'cluster')]  
+  targetCols <- c(paste(diffMarkers[[cont]], "_cutted", sep = ""), "cluster")
+  pcbilTucsCutted <- pcbilTucs[, targetCols]  
   #pcbilTucs$cluster <- as.factor(as.character(pcbilTucs$cluster))
 
   if(cont == 1) {
     # "extrahepatic-pcbil-tuc vs intrahepatic-ccc-tuc": "maspin", "ca125", "cea_m", "muc5ac", "ck17", "p53", "cdx2", "cd56", "wt1cyt", "vim", "smad4"
-      pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
-                             Maspin = round(prop.table(table(maspin)),2) *100,
-                             CA125 = round(prop.table(table(ca125)),2) * 100,
-                             mCEA = round(prop.table(table(cea_m)),2) * 100,
-                             MUC5Ac = round(prop.table(table(muc5ac)),2) * 100,
-                             CK17 = round(prop.table(table(ck17)),2) * 100,
-                             p53 = round(prop.table(table(p53)),2) * 100,
-                             CDX2 = round(prop.table(table(cdx2)),2) * 100,
-                             CD56 = round(prop.table(table(cd56)),2) * 100,
-                             WT1_cyt = round(prop.table(table(wt1cyt)),2) * 100,
-                             Vim = round(prop.table(table(vim)),2) * 100,
-                             SMAD4 = round(prop.table(table(smad4)),2) * 100,
-                             score_cats = names(table(maspin)))
+      pcbilTucsProp <- ddply(pcbilTucsCutted, .(cluster), summarise,
+                             Maspin = round(prop.table(table(maspin_cutted)),2) *100,
+                             CA125 = round(prop.table(table(ca125_cutted)),2) * 100,
+                             mCEA = round(prop.table(table(cea_m_cutted)),2) * 100,
+                             MUC5Ac = round(prop.table(table(muc5ac_cutted)),2) * 100,
+                             CK17 = round(prop.table(table(ck17_cutted)),2) * 100,
+                             p53 = round(prop.table(table(p53_cutted)),2) * 100,
+                             CDX2 = round(prop.table(table(cdx2_cutted)),2) * 100,
+                             CD56 = round(prop.table(table(cd56_cutted)),2) * 100,
+                             WT1_cyt = round(prop.table(table(wt1cyt_cutted)),2) * 100,
+                             Vim = round(prop.table(table(vim_cutted)),2) * 100,
+                             SMAD4 = round(prop.table(table(smad4_cutted)),2) * 100,
+                             score_cats = names(table(maspin_cutted)))
   } else if(cont == 2) {
         # "extrahepatic-pcbil-tuc vs intestinal-tuc": "ck7", "muc1", "muc5ac", "ck17", "muc2", "ck20", "cdx2"
-        pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
-                             CK7 = round(prop.table(table(ck7)),2) *100,
-                             MUC1 = round(prop.table(table(muc1)),2) * 100,                    
-                             MUC5Ac = round(prop.table(table(muc5ac)),2) * 100,
-                             CK17 = round(prop.table(table(ck17)),2) * 100,
-                             MUC2 = round(prop.table(table(muc2)),2) * 100,
-                             CK20 = round(prop.table(table(ck20)),2) * 100,
-                             CDX2 = round(prop.table(table(cdx2)),2) * 100,
-                             score_cats = names(table(ck7)))    
+        pcbilTucsProp <- ddply(pcbilTucsCutted, .(cluster), summarise,
+                             CK7 = round(prop.table(table(ck7_cutted)),2) *100,
+                             MUC1 = round(prop.table(table(muc1_cutted)),2) * 100,                    
+                             MUC5Ac = round(prop.table(table(muc5ac_cutted)),2) * 100,
+                             CK17 = round(prop.table(table(ck17_cutted)),2) * 100,
+                             MUC2 = round(prop.table(table(muc2_cutted)),2) * 100,
+                             CK20 = round(prop.table(table(ck20_cutted)),2) * 100,
+                             CDX2 = round(prop.table(table(cdx2_cutted)),2) * 100,
+                             score_cats = names(table(ck7_cutted)))    
   } else if(cont == 3) {
     # "intrahepatic-ccc-tuc vs hcc-tuc": "ck19", "berep4", "ck7",  "muc1", "ca19_9", "vim", "cea_p", "maspin", "wt1cyt", "smad4", "ki67", "cea_m"
-      pcbilTucsProp <- ddply(pcbilTucs, .(cluster), summarise,
-                             CK19 = round(prop.table(table(ck19)),2) *100,
-                             BerEP4 = round(prop.table(table(berep4)),2) *100,
-                             CK7 = round(prop.table(table(ck7)),2) *100,
-                             MUC1 = round(prop.table(table(muc1)),2) * 100,
-                             CA19_9 = round(prop.table(table(ca19_9)),2) * 100,
-                             Vim = round(prop.table(table(vim)),2) * 100,
-                             pCEA = round(prop.table(table(cea_p)),2) * 100,                             
-                             Maspin = round(prop.table(table(maspin)),2) *100,
-                             WT1_cyt = round(prop.table(table(wt1cyt)),2) * 100,
-                             SMAD4 = round(prop.table(table(smad4)),2) * 100,
-                             Ki67 = round(prop.table(table(ki67)),2) * 100,
-                             mCEA = round(prop.table(table(cea_m)),2) * 100,                             
-                             score_cats = names(table(ck19)))    
+      pcbilTucsProp <- ddply(pcbilTucsCutted, .(cluster), summarise,
+                             CK19 = round(prop.table(table(ck19_cutted)),2) *100,
+                             BerEP4 = round(prop.table(table(berep4_cutted)),2) *100,
+                             CK7 = round(prop.table(table(ck7_cutted)),2) *100,
+                             MUC1 = round(prop.table(table(muc1_cutted)),2) * 100,
+                             CA19_9 = round(prop.table(table(ca19_9_cutted)),2) * 100,
+                             Vim = round(prop.table(table(vim_cutted)),2) * 100,
+                             pCEA = round(prop.table(table(cea_p_cutted)),2) * 100,                             
+                             Maspin = round(prop.table(table(maspin_cutted)),2) *100,
+                             WT1_cyt = round(prop.table(table(wt1cyt_cutted)),2) * 100,
+                             SMAD4 = round(prop.table(table(smad4_cutted)),2) * 100,
+                             Ki67 = round(prop.table(table(ki67_cutted)),2) * 100,
+                             mCEA = round(prop.table(table(cea_m_cutted)),2) * 100,                             
+                             score_cats = names(table(ck19_cutted)))    
   }    
     
-  pcbilTucsProp$score_cats <- factor(pcbilTucsProp$score_cats, levels = c('N', 'S', 'P', 'D'))
+  pcbilTucsProp$score_cats <- factor(pcbilTucsProp$score_cats, levels = c('N', 'P'))
 
-  pcbilTucsLong <- melt(pcbilTucsProp, measure.vars= parsed_diffMarkers[[cont]], variable_name="marker")
-
-
-  pl1 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn1[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn1[cont], sep=""))
+  posPcbilTucsProp = subset(pcbilTucsProp, score_cats == "P")
     
-  pl2 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn2[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn2[cont], sep="")) 
-    
-  pl3 <- ggplot(pcbilTucsLong, aes(score_cats, value, fill=cluster)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") 
+  pcbilTucsLong <- melt(posPcbilTucsProp, measure.vars= parsed_diffMarkers[[cont]], variable_name="marker")
+  
+  pl3 <- ggplot(pcbilTucsLong, aes(score_cats, value, fill= factor(cluster, levels = c("extrahepatic-pcbil-tuc","intrahepatic-ccc-tuc","intestinal-tuc","hcc-tuc") ))) + geom_bar(stat="identity", position="dodge", alpha = 0.85) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Positive* immunoreactivity") + ylab("% cases")  + scale_fill_manual("Tumour types",values = compBarCol[[cont]])
     #+ ggtitle("Comparative immunohistogram")
  
  
- labs <- cbind(c("% stained tumor cells", "N: 0%      ", "S: <10%  ", " P: 10-85%", "D: > 85% "))
+ labs <- c("")
  g <- tableGrob(labs, gpar.coretext=gpar(fontsize=10), gpar.corefill=gpar(col="white")) # core.just="left" 
     
     
