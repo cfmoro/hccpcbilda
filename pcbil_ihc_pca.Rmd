@@ -10,9 +10,9 @@ suppressMessages(require(FactoMineR))
 
 File names: imputed dataset
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
-hccpcbil_pca_output <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/pca/imputed_hccpcbil_PCA_output.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+data_set_file_imputed <- paste(myWorkDirectory, "da/output/imputedPcbilD.csv", sep="")
+hccpcbil_pca_output <- paste(myWorkDirectory, "da/output/pca/imputed_hccpcbil_PCA_output.csv", sep="")
 ```
 
 Importing imputed dataset `r data_set_file_imputed` ...
@@ -32,7 +32,7 @@ while(outCont <= 2) {
     pcbilDataImputed <- subset(pcbilDataImputed, pcbilDataImputed$clin_diag != "Hepatocellular Cancer")
     pcbilDataImputed$clin_diag <- factor(pcbilDataImputed$clin_diag)
     titleInit <- "PCBIL"
-    hccpcbil_pca_output <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/pca/imputed_pcbil_PCA_output.csv", sep="")
+    #hccpcbil_pca_output <- paste(myWorkDirectory, "da/output/pca/imputed_pcbil_PCA_output.csv", sep="")
     colDiag <- pcbilColDiag
   }
   pcbilDataImputed.PCA <- pcbilDataImputed[, c("ck5", "ck7", "ck17", "ck18", "ck19", "ck20", 
