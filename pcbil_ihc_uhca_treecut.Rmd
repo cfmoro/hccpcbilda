@@ -6,13 +6,14 @@ Unsupervised Hierarchical Cluster Analysis - tree cut & cluster member extractio
 ```{r}
 suppressMessages(require(gplots))
 suppressMessages(require(amap))
+require(plyr)
 ```
 
 File names: imputed dataset
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
-clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+data_set_file_imputed <- paste(myWorkDirectory, "da/output/imputedPcbilD.csv", sep="")
+clusteredPcbilFileName <- paste(myWorkDirectory, "da/output/clusteredPcbilD.csv", sep="")
 ```
 
 Importing imputed dataset `r data_set_file_imputed` ...
@@ -675,9 +676,10 @@ colnames(column_annotation) <- c("Tumour clusters",  "Clinical diagnoses")
 heatmap.3(imputedMatrix, Rowv=as.dendrogram(hr), Colv=as.dendrogram(hc), col=greenred(100), scale="none", density.info="none",  ColSideColors=column_annotation)
 ```
 
-Save clusterd dataset
+Save clustered dataset
 ```{r}
 pcbilDataImputed$pad <- rownames(pcbilDataImputed)
+revalue(pcbilDataImputed$cluster, c("intermediate-pcbil-tuc" = "unclassified-tucs")) -> pcbilDataImputed$cluster
 write.csv(pcbilDataImputed, clusteredPcbilFileName, row.names=F, na="")
 ```
 End of cluster analysis ;)
