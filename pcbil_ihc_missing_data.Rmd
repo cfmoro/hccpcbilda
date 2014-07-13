@@ -10,9 +10,9 @@ suppressMessages(require(impute))
 
 Dataset raw file
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-data_set_file_raw <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/raw/hcc_pcbil_raw.csv", sep="")
-imputedPcbilFileName  <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+data_set_file_raw <- paste(myWorkDirectory, "raw/hcc_pcbil_raw.csv", sep="")
+imputedPcbilFileName  <- paste(myWorkDirectory, "da/output/imputedPcbilD.csv", sep="")
 ```
 
 Importing dataset `r data_set_file_raw` ...
