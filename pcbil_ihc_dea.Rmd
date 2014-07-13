@@ -13,8 +13,8 @@ suppressMessages(require(samr))
 
 File names: clustered dataset
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "da/output/clusteredPcbilD.csv", sep="")
 ```
 
 Importing clustered dataset `r clusteredPcbilFileName` ...
