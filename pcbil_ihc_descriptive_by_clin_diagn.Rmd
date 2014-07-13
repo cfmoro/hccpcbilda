@@ -7,12 +7,14 @@ Descriptive statistics - by clinical diagnoses
 suppressMessages(require(psych))
 suppressMessages(require(pander))
 suppressMessages(require(lawstat))
+suppressMessages(require(ggplot2))
+suppressMessages(require(gridExtra))
 ```
 
 File names: imputed dataset
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-data_set_file_imputed <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/imputedPcbilD.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+data_set_file_imputed <- paste(myWorkDirectory, "da/output/imputedPcbilD.csv", sep="")
 ```
 
 Importing imputed dataset `r data_set_file_imputed` ...
@@ -35,6 +37,28 @@ pcbilNames <- names(pcbilDataWork)
 describeBy(pcbilDataWork[1:27], pcbilDataWork$clin_diag)
 ```
 Intepretation of skew and kurtosis: skew > 3 and/or kurtosis > 10 for several markers, indicating non-normal distribution. Non-parametric tests shall be used in case of differential expression analys.
+
+Histograms
+```{r fig.width=12, fig.height=10}
+colors <- c("green", "blue", "yellow", "purple", "deeppink", "red", "black")
+diagnoses <- c("Hepatocellular Cancer", "Intrahepatic Cholangiocarcinoma", 
+              "Perihilary Ac", "Gallbladder Ac", "Distal Bile Duct Ac", 
+              "Pancreas Ac", "Ampulla Ac")
+cont <- 1
+for(a_diagn in diagnoses) {
+  tumorSubset <- subset(pcbilDataWork, clin_diag == a_diagn)
+  plot_list <- list()
+  for(marker in pcbilNames[1:27]) {
+    pl <- ggplot(tumorSubset, aes_string(x = marker)) + geom_histogram(aes(y = ..density..), fill = colors[cont], colour = "black", binwidth = 10) + labs(x = paste(marker, sep=""), y = "Density") + stat_function(fun=dnorm, args=list(mean = mean(tumorSubset[, marker],na.rm = TRUE), sd = sd(tumorSubset[, marker], na.rm = TRUE)), colour = "blue", size=1) + coord_cartesian(ylim=c(0,1)) + coord_cartesian(xlim=c(0,100)) # + facet_wrap( ~ clin_diag)
+    plot_list[[length(plot_list) + 1]] <- pl
+  }  
+  n <- length(plot_list)
+  nCol <- floor(sqrt(n))
+  do.call("grid.arrange", c(plot_list, ncol=nCol, main=a_diagn))
+  # break
+  cont <- cont + 1
+}
+```
 
 Modified robust Brown-Forsythe Levene-type tests based on the absolute deviations from the
   median - by marker and clinical diagnosis
