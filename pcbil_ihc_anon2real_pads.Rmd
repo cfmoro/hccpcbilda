@@ -4,11 +4,11 @@ Anon to real PADs
 =================
 File names: clustered dataset
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
-anonPadsFilename <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/raw/hcc_pcbil_raw.anon", sep="")
-realPadsAllFilename <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/realPadsAllPcbil.csv", sep="")
-realPadsIntestinalFilename <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/realPadsIntestinalPcbil.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "da/output/clusteredPcbilD.csv", sep="")
+anonPadsFilename <- paste(myWorkDirectory, "/raw/hcc_pcbil_raw.anon", sep="")
+realPadsAllFilename <- paste(myWorkDirectory, "da/output/realPadsAllPcbil.csv", sep="")
+realPadsIntestinalFilename <- paste(myWorkDirectory, "da/output/realPadsIntestinalPcbil.csv", sep="")
 ```
 
 Importing clustered dataset `r clusteredPcbilFileName` and anonimyzed PADs key file `r anonPadsFilename`...
@@ -21,10 +21,10 @@ Merging datasets, subsetting and saving real pads for all cases and only for the
 ```{r}
 realPadsPcbilD <- merge(pcbilDataClustered, anonPads)
 
-realPadsAll <- subset(realPadsPcbilD, select="real_pad")
+realPadsAll <- subset(realPadsPcbilD, select=c("pad", "real_pad"))
 write.csv(realPadsAll, realPadsAllFilename, row.names=F, na="")
 
-realPadsIntestinal <- subset(realPadsPcbilD, cluster == "intestinal-tuc", select="real_pad")
+realPadsIntestinal <- subset(realPadsPcbilD, cluster == "intestinal-tuc", select=c("pad", "real_pad"))
 write.csv(realPadsIntestinal, realPadsIntestinalFilename, row.names=F, na="")
 ```
 
