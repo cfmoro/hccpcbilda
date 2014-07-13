@@ -39,14 +39,14 @@ Simple immunohistograms
 ```{r fig.width=12, fig.height=8}
 diffDiagn1 <- c("extrahepatic-pcbil-tuc", "intestinal-tuc", "intrahepatic-ccc-tuc", "hcc-tuc") # 
 diffDiagn2 <- c("intrahepatic-ccc-tuc", "extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc") # 
-diffMarkers <- c("ck7", "ck17", "ck19", "ck20", "vim", "muc1", "muc2", "muc5ac", "berep4", "ca19_9", "ca125", "cea_m", "cea_p", "maspin", "p53", "cdx2", "cd56", "wt1cyt", "smad4")
+diffMarkers <- c("ck7", "ck17", "ck19", "ck20", "vim", "muc1", "muc2", "muc5ac", "berep4", "cea_m", "cea_p", "ca19_9", "ca125", "maspin", "cdx2", "p53", "smad4", "cd56", "wt1cyt")
 barCol <- c("red", "blueviolet", "blue", "green")
 
 
 types2Markers <- list("Intermediate filaments" = c("ck7", "ck17", "ck19", "ck20", "vim"),
                       "Mucins" = c("muc1", "muc2", "muc5ac", "muc6"),
-                      "Epithelial markers" = c("ca19_9", "ca125", "cea_m", "cea_p", "maspin", "berep4"),
-                      "Nuclear markers" = c("p53", "smad4", "cdx2"),
+                      "Epithelial markers" = c("berep4", "cea_m", "cea_p", "ca19_9", "ca125",  "maspin"),
+                      "Nuclear markers" = c("cdx2", "p53", "smad4"),
                       "Other" = c("cd56", "wt1cyt"))
 
 get_marker_type <- function(marker) {
@@ -128,12 +128,12 @@ Comparative immunohistograms
 diffDiagn1 <- c("extrahepatic-pcbil-tuc", "extrahepatic-pcbil-tuc", "intrahepatic-ccc-tuc") # 
 diffDiagn2 <- c("intrahepatic-ccc-tuc", "intestinal-tuc", "hcc-tuc") # 
 diffMarkers <- list(
-  c("ck17", "muc5ac", "cea_m", "ca125", "maspin", "p53", "cdx2",  "vim",  "smad4",    "cd56", "wt1cyt"),
+  c("ck17", "muc5ac", "cea_m", "ca125", "maspin", "cdx2", "p53",  "vim",  "smad4",    "cd56", "wt1cyt"),
   c("ck7", "ck17", "muc1", "muc5ac",  "ck20", "muc2",  "cdx2"),
   c("ck7", "ck19", "vim", "muc1", "berep4", "cea_m", "cea_p", "ca19_9",    "maspin",  "ki67", "wt1cyt", "smad4")
   )
 parsed_diffMarkers <- list(
-  c("CK17", "MUC5Ac", "mCEA", "CA125",  "Maspin", "p53", "CDX2",  "Vim",  "SMAD4",  "CD56", "WT1_cyt"),
+  c("CK17", "MUC5Ac", "mCEA", "CA125",  "Maspin", "CDX2", "p53",  "Vim",  "SMAD4",  "CD56", "WT1_cyt"),
   c("CK7", "CK17", "MUC1", "MUC5Ac",  "CK20", "MUC2",  "CDX2"),
   c("CK7", "CK19", "Vim", "MUC1", "BerEP4", "mCEA", "pCEA", "CA19_9",     "Maspin",  "Ki67",  "WT1_cyt", "SMAD4")
   )
