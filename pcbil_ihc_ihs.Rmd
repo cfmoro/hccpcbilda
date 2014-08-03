@@ -14,8 +14,8 @@ suppressMessages(require(reshape))
 
 File names: clustered dataset
 ```{r}
-myWorkDirectory <- "/home/bibu/workspace/"
-clusteredPcbilFileName <- paste(myWorkDirectory, "hcc-pcbil_FDATA_ANALYSIS/r/output/clusteredPcbilD.csv", sep="")
+myWorkDirectory <- "~/Workspace/research/pcbil/"
+clusteredPcbilFileName <- paste(myWorkDirectory, "da/output/clusteredPcbilD.csv", sep="")
 ```
 
 Importing clustered dataset `r clusteredPcbilFileName` ...
@@ -124,7 +124,9 @@ while(cont <= length(diffDiagn1)){
     
   pcbilTucsProp$score_cats <- factor(pcbilTucsProp$score_cats, levels = c('N', 'S', 'P', 'D'))
 
-  pcbilTucsLong <- melt(pcbilTucsProp, measure.vars= paste(diffMarkers, "p", sep="") , variable_name="marker")
+    # hack to avoid: Error in provideDimnames(x) : 'dimnames' applied to non-array (cryptic, no idea why)
+  numRows <- nrow(pcbilTucsProp)
+  pcbilTucsLong <- melt(pcbilTucsProp[1: numRows, ], measure.vars= paste(diffMarkers, "p", sep="") , variable_name="marker")
 
 
   pl1 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn1[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", fill= barCol[cont]) + facet_wrap( ~ marker, ncol=6) + xlab("Immunohistochemical scores") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn1[cont], sep=""))
@@ -222,7 +224,10 @@ while(cont <= length(diffDiagn1)){
     
   pcbilTucsProp$score_cats <- factor(pcbilTucsProp$score_cats, levels = c('N', 'S', 'P', 'D'))
 
-  pcbilTucsLong <- melt(pcbilTucsProp, measure.vars= parsed_diffMarkers[[cont]], variable_name="marker")
+  
+    # hack to avoid: Error in provideDimnames(x) : 'dimnames' applied to non-array (cryptic, no idea why)
+  numRows <- nrow(pcbilTucsProp)
+  pcbilTucsLong <- melt(pcbilTucsProp[1 : numRows, ], measure.vars= parsed_diffMarkers[[cont]], variable_name="marker")
 
 
   pl1 <- ggplot(subset(pcbilTucsLong, cluster == diffDiagn1[cont]), aes(score_cats, value)) + geom_bar(stat="identity", position="identity", alpha = 0.5) + facet_wrap( ~ marker, ncol=ncols[cont]) + xlab("Immunoreactivity") + ylab("% cases") + ggtitle(paste("Immunohistogram - ",diffDiagn1[cont], sep=""))
