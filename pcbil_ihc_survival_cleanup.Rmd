@@ -1,0 +1,283 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Survival data clean up
+===============================================================
+
+Import needed libs
+```{r}
+library(xlsx)
+```
+
+Configure file names and paths
+```{r}
+# read in the first worksheet from the workbook myexcel.xlsx
+# first row contains variable names
+rawFile <- "/da/survival_analysis/final_ClinicalData_WORK_SURVIVAL_ANALYSIS_cfm.xlsx"
+workDir <- "~/Workspace/research/pcbil" 
+pathRawFile <- paste(workDir, rawFile, sep="")
+
+completeUniqueFinalSurvDataFileName <- paste(workDir, "/da/survival_analysis/completeUniqueFinalSurvData.csv", sep="")
+
+realPadsAllFilename <- paste(workDir, "/da/output/realPadsAllPcbil.csv", sep="")
+
+```
+
+Import from final survival data `r pathRawFile`
+```{r}
+finalSurvData <- read.xlsx2(file = pathRawFile, sheetIndex = 1, header = TRUE, colClasses = c(rep("character", 2), "Date", rep("character", 2), "Date", rep("character", 8), "Date", "character"), na.strings = "")
+
+# Integrity check
+str(finalSurvData)
+```
+
+Clean up: control and fix field types and values
+```{r}
+# pad 
+sum(is.na(finalSurvData$pad))
+
+# person_number
+sum(is.na(finalSurvData$person_number))
+
+# date birth
+sum(is.na(finalSurvData$date_birth))
+
+# gender
+sum(is.na(finalSurvData$gender))
+
+# chemo
+table(finalSurvData$chemo, useNA = "always")
+levels(finalSurvData$chemo) <- c(levels(finalSurvData$chemo), "TRUE", "FALSE") 
+finalSurvData$chemo[finalSurvData$chemo == "y" | finalSurvData$chemo == "y " | finalSurvData$chemo == "Y"]  <- "TRUE" 
+finalSurvData$chemo[finalSurvData$chemo == "n" | finalSurvData$chemo == "n "]  <- "FALSE"
+finalSurvData$chemo <- as.logical(finalSurvData$chemo)
+table(finalSurvData$chemo, useNA = "always")
+
+# date pad
+sum(is.na(finalSurvData$date_pad))
+
+# type probe
+levels(finalSurvData$type_probe)
+table(finalSurvData$type_probe, useNA = "always")
+finalSurvData$type_probe[finalSurvData$type_probe == "r "]  <- "r"
+finalSurvData$type_probe[finalSurvData$type_probe == ""]  <- NA
+finalSurvData$type_probe <- droplevels(finalSurvData$type_probe)
+levels(finalSurvData$type_probe)
+table(finalSurvData$type_probe, useNA = "always")
+
+# p_r
+levels(finalSurvData$p_r)
+table(finalSurvData$p_r, useNA = "always")
+finalSurvData$p_r[finalSurvData$p_r == ""]  <- NA
+finalSurvData$p_r <- droplevels(finalSurvData$p_r)
+levels(finalSurvData$p_r)
+table(finalSurvData$p_r, useNA = "always")
+
+# p_t
+levels(finalSurvData$p_t)
+table(finalSurvData$p_t, useNA = "always")
+finalSurvData$p_t[finalSurvData$p_t == ""]  <- NA
+finalSurvData$p_t <- droplevels(finalSurvData$p_t)
+levels(finalSurvData$p_t)
+table(finalSurvData$p_t, useNA = "always")
+
+# p_n
+levels(finalSurvData$p_n)
+table(finalSurvData$p_n, useNA = "always")
+finalSurvData$p_n[finalSurvData$p_n == "" | finalSurvData$p_n == "x"]  <- NA
+finalSurvData$p_n <- droplevels(finalSurvData$p_n)
+levels(finalSurvData$p_n)
+table(finalSurvData$p_n, useNA = "always")
+
+# p_l
+levels(finalSurvData$p_l)
+table(finalSurvData$p_l, useNA = "always")
+finalSurvData$p_l[finalSurvData$p_l == "" | finalSurvData$p_l == "x"]  <- NA
+finalSurvData$p_l <- droplevels(finalSurvData$p_l)
+levels(finalSurvData$p_l)
+table(finalSurvData$p_l, useNA = "always")
+
+# p_v
+levels(finalSurvData$p_v)
+table(finalSurvData$p_v, useNA = "always")
+finalSurvData$p_v[finalSurvData$p_v == "" | finalSurvData$p_v == "x"]  <- NA
+finalSurvData$p_v <- droplevels(finalSurvData$p_v)
+levels(finalSurvData$p_v)
+table(finalSurvData$p_v, useNA = "always")
+
+# p_pn
+levels(finalSurvData$p_pn)
+table(finalSurvData$p_pn, useNA = "always")
+finalSurvData$p_pn <- droplevels(finalSurvData$p_pn)
+levels(finalSurvData$p_pn)
+table(finalSurvData$p_pn, useNA = "always")
+
+# date death
+sum(is.na(finalSurvData$date_death))
+```
+<p> Control case with pT = 'is'
+
+Control for duplicated amoung unique ID fields: pad, personal number
+```{r}
+
+# pad
+table(duplicated(finalSurvData$pad))
+
+# personal number
+#    check for duplicates
+dim(finalSurvData)
+table(duplicated(finalSurvData$person_number))
+#    there are duplicates, we need to split beween unique and non-unique patients
+uniquePatsData <- subset(finalSurvData, !duplicated(finalSurvData$person_number))
+dim(uniquePatsData)
+table(duplicated(uniquePatsData$person_number))
+
+duplicatedPatsData <- subset(finalSurvData, duplicated(finalSurvData$person_number))
+dim(duplicatedPatsData)
+table(duplicated(duplicatedPatsData$person_number))
+
+# extract the first occurrences for the repeated from uniquePatsData
+repeatedPatsData <- subset(uniquePatsData, person_number %in% duplicatedPatsData$person_number)
+dim(repeatedPatsData)
+table(duplicated(repeatedPatsData$person_number))
+
+# put together rows for all repeated patients in the same dataset
+allRepPatsData <- rbind(repeatedPatsData, duplicatedPatsData)
+# and order by personal_number
+orderedAllRepPatsData <- allRepPatsData[order(allRepPatsData$person_number), ]
+
+# visual examination of dataset with all repeated patients
+orderedAllRepPatsData[, c("pad", "person_number", "type_probe", "date_death")]
+
+# by visual assessment: remove multiple instaces of personal number, which are due: multiple diagnostic probes (tumor samples), tumor heterogeneity (where immunoprofile for the various highly distinct tumor components were recorded). Kept resection probes where both biosy and resection.
+duplicates2Remove <- c( "Pancreas Ac|T5900/09_1" , "Intrahepatic Cholangiocarcinoma|T17202/11" , "Gallbladder Ac|T17965/10_2"  , "Ampulla Ac|T1634/12_1"	, "Intrahepatic Cholangiocarcinoma|T6343/12_1", "Hepatocellular Cancer|T1805/11", "Pancreas Ac|T21344/10_2", "Ampulla Ac|T1042/10_2", "Ampulla Ac|T12294/11", "Hepatocellular Cancer|T2493/13_2", "Intrahepatic Cholangiocarcinoma|T2320/06_1", "Intrahepatic Cholangiocarcinoma|T792/08_1", "Pancreas Ac|T19266/09", "Hepatocellular Cancer|K19667/11", "Hepatocellular Cancer|T5784/13", "Intrahepatic Cholangiocarcinoma|T6965/08" , "Intrahepatic Cholangiocarcinoma|T696/08_2", "Intrahepatic Cholangiocarcinoma|T12264/12", "Hepatocellular Cancer|T7201/10_2", "Hepatocellular Cancer|T13365/09_2", "Hepatocellular Cancer|T504/11", "Intrahepatic Cholangiocarcinoma|T8451/06_2", "Perihilary Ac|T1236/06", "Perihilary Ac|T19735/11_2", "Intrahepatic Cholangiocarcinoma|T17615/10", "Perihilary Ac|T20407/10", "Intrahepatic Cholangiocarcinoma|T8275/10_2", "Intrahepatic Cholangiocarcinoma|T5709/12_2", "Intrahepatic Cholangiocarcinoma|T3300/12"	
+  )
+
+# integrity check
+length(duplicates2Remove)
+nrow(orderedAllRepPatsData) - length(duplicates2Remove)
+nrow(repeatedPatsData)
+
+# remove repeated tumour profiles from finalSurvData
+uniqueFinalSurvData <- subset(finalSurvData, !(pad %in% duplicates2Remove) )
+
+# check for duplicates in cleaned survival data set
+dim(uniqueFinalSurvData)
+table(duplicated(uniqueFinalSurvData$person_number))
+```
+
+Calculate age at diagnosis
+```{r}
+# function to calculate age: https://github.com/jknowles/eeptools/blob/master/R/age_calc.R
+age_calc <- function(dob, enddate=Sys.Date(), units='months', precise=TRUE){
+  if (!inherits(dob, "Date") | !inherits(enddate, "Date")){
+    stop("Both dob and enddate must be Date class objects")
+  }
+  start <- as.POSIXlt(dob)
+  end <- as.POSIXlt(enddate)
+  if(precise){
+    start_is_leap <- ifelse(start$year %% 400 == 0, TRUE, 
+                            ifelse(start$year %% 100 == 0, FALSE,
+                                   ifelse(start$year %% 4 == 0, TRUE, FALSE)))
+    end_is_leap <- ifelse(end$year %% 400 == 0, TRUE, 
+                          ifelse(end$year %% 100 == 0, FALSE,
+                                 ifelse(end$year %% 4 == 0, TRUE, FALSE)))
+  }
+  if(units=='days'){
+    result <- difftime(end, start, units='days')
+  }else if(units=='months'){
+    months <- sapply(mapply(seq, as.POSIXct(start), as.POSIXct(end), 
+                            by='months', SIMPLIFY=FALSE), 
+                     length) - 1
+    # length(seq(start, end, by='month')) - 1
+    if(precise){
+      month_length_end <- ifelse(end$mon==1, 28,
+                                 ifelse(end$mon==1 & end_is_leap, 29,
+                                        ifelse(end$mon %in% c(3, 5, 8, 10), 
+                                               30, 31)))
+      month_length_prior <- ifelse((end$mon-1)==1, 28,
+                                   ifelse((end$mon-1)==1 & start_is_leap, 29,
+                                          ifelse((end$mon-1) %in% c(3, 5, 8, 
+                                                                    10), 
+                                                 30, 31)))
+      month_frac <- ifelse(end$mday > start$mday,
+                           (end$mday-start$mday)/month_length_end,
+                           ifelse(end$mday < start$mday, 
+                                  (month_length_prior - start$mday) / 
+                                    month_length_prior + 
+                                    end$mday/month_length_end, 0.0))
+      result <- months + month_frac
+    }else{
+      result <- months
+    }
+  }else if(units=='years'){
+    years <- sapply(mapply(seq, as.POSIXct(start), as.POSIXct(end), 
+                           by='years', SIMPLIFY=FALSE), 
+                    length) - 1
+    if(precise){
+      start_length <- ifelse(start_is_leap, 366, 365)
+      end_length <- ifelse(end_is_leap, 366, 365)
+      start_day <- ifelse(start_is_leap & start$yday >= 60,
+                          start$yday - 1,
+                          start$yday)
+      end_day <- ifelse(end_is_leap & end$yday >=60,
+                        end$yday - 1,
+                        end$yday)
+      year_frac <- ifelse(start_day < end_day,
+                          (end_day - start_day)/end_length,
+                          ifelse(start_day > end_day, 
+                                 (start_length-start_day) / start_length +
+                                   end_day / end_length, 0.0))
+      result <- years + year_frac
+    }else{
+      result <- years
+    }
+  }else{
+    stop("Unrecognized units. Please choose years, months, or days.")
+  }
+  return(result)
+}
+# Security check: date_birth, date_pad and date_death are of R type Date
+class(uniqueFinalSurvData$date_birth)
+class(uniqueFinalSurvData$date_pad)
+class(uniqueFinalSurvData$date_death)
+
+
+#Calculate age at diagnosis
+ageAtDiagnosis <- round(age_calc(uniqueFinalSurvData$date_birth, uniqueFinalSurvData$date_pad), digits = 2)
+
+# Add column age at surgery to work data set
+uniqueFinalSurvData$age_pad <- ageAtDiagnosis
+head(uniqueFinalSurvData[, c("pad", "person_number", "date_birth", "date_pad", "age_pad")])
+
+# Set end date of follow-up: 6-sept-2014
+dateEndFollowUp <- as.Date("2014-09-06")
+
+# Calculate survival time (months) and set censoring vector
+uniqueFinalSurvData$surv_time[is.na(uniqueFinalSurvData$date_death)] <- round(age_calc(uniqueFinalSurvData$date_pad[is.na(uniqueFinalSurvData$date_death)] , dateEndFollowUp , units="months"), digits = 2)  # alive patients, they have NAN date_death
+uniqueFinalSurvData$death_observed[is.na(uniqueFinalSurvData$date_death)] <- 0 # alive patients, they have NAN date_death, censored
+
+uniqueFinalSurvData$surv_time[!(is.na(uniqueFinalSurvData$date_death))] <- round(age_calc(uniqueFinalSurvData$date_pad[!(is.na(uniqueFinalSurvData$date_death))] , uniqueFinalSurvData$date_death[!(is.na(uniqueFinalSurvData$date_death))] , units="months"), digits = 2) # death patients, they have registered date_death
+uniqueFinalSurvData$death_observed[!(is.na(uniqueFinalSurvData$date_death))] <- 1 # death patients, they have NAN date_death, observed
+# Unfortunately, we couldn't get further censoringinformation (loss to follow up)
+
+# Fix info for one patient who died before pad was signed out
+summary(uniqueFinalSurvData$surv_time)
+uniqueFinalSurvData[uniqueFinalSurvData$surv_time  < 0 , c("surv_time")] <- 0
+summary(uniqueFinalSurvData$surv_time)
+```
+
+Import diagnostic data (by cluster and anatomical-based diagnosis) from `r realPadsAllFilename` and merge into survival data set
+```{r}
+realPadsAll <- read.csv(file = realPadsAllFilename)
+head(realPadsAll)
+colnames(realPadsAll) <- c("pad", "anon_pad", "clin_diag", "cluster") # modify column names for a neat merge
+head(realPadsAll)
+
+completeUniqueFinalSurvData <- merge(uniqueFinalSurvData, realPadsAll[, c(1,3,4)], by = "pad")
+completeUniqueFinalSurvData <- completeUniqueFinalSurvData[, !(colnames(completeUniqueFinalSurvData) %in% c("comments","na.strings"))]
+```
+
+Save the cleaned survival data set
+```{r}
+write.csv(completeUniqueFinalSurvData, completeUniqueFinalSurvDataFileName, row.names=F, na="")
+```

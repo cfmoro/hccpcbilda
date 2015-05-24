@@ -1,0 +1,300 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Survival analysis
+===============================================================
+
+Import needed libs
+```{r}
+library(survival)
+library(pastecs)
+library(rms)
+library(ggplot2)
+```
+
+Configure file names and paths
+```{r}
+workDir <- "~/Workspace/research/pcbil" 
+completeUniqueFinalSurvDataFileName <- paste(workDir, "/da/survival_analysis/completeUniqueFinalSurvData.csv", sep="")
+```
+
+Import complete survival data
+```{r}
+completeSurvData <- read.csv(file = completeUniqueFinalSurvDataFileName)
+completeSurvData$date_birth <- as.Date(completeSurvData$date_birth)
+completeSurvData$date_pad <- as.Date(completeSurvData$date_pad)
+completeSurvData$date_death <- as.Date(completeSurvData$date_death)
+
+# Remove unclassified-tucs, as this is not a real cluster
+table(completeSurvData$cluster, useNA = "always")
+completeSurvData[ completeSurvData$cluster == "unclassified-tucs", c("cluster") ] <- NA
+table(completeSurvData$cluster, useNA = "always")
+
+
+# Integrity check
+str(completeSurvData)
+summary(completeSurvData$surv_time) # one patient (109) died before pad
+round(stat.desc(completeSurvData$surv_time, basic =  FALSE, norm = TRUE), digits=3)
+```
+
+<h1>Kaplan-Meier</h1>
+
+<h2>All patients</h2>
+```{r}
+# KM-curves
+#   -All patients
+all_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ 1, data = completeSurvData) 
+print(all_PcbilSurvFit, print.rmean = TRUE)
+plot(all_PcbilSurvFit,  main = "KM - All", xlab = "Time (months)", ylab = "Survival")
+
+#   -All, biopsy vs resection
+bx_resPcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ type_probe, data = completeSurvData) 
+print(bx_resPcbilSurvFit, print.rmean = TRUE)
+
+survplot(bx_resPcbilSurvFit, xlim = c(0, 150), main = "KM - Biopsy vs resection", xlab = "Time (months)", ylab = "Survival", time.inc = 10, n.risk   = TRUE,  y.n.risk = -0.3, cex.n.risk = 0.6) # Add to shor 6-yrs, xlim = c(0, 72) # Remove CI c("none","bands","bars")[1]
+
+# TODO fix one missing data in probe type
+
+
+#   -All, by cluster
+cluster_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = completeSurvData) # 
+print(cluster_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+
+#   -All, by clin_diag
+clin_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = completeSurvData) 
+print(clin_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h2>Biopsy patients</h2>
+```{r}
+# Obtain and attach data set
+pxCompleteSurvData <- subset(completeSurvData, type_probe == "b")
+
+# Biopsy patients
+px_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ 1, data = pxCompleteSurvData) 
+print(px_PcbilSurvFit, print.rmean = TRUE)
+
+plot(px_PcbilSurvFit,  main = "KM - Biopsy", xlab = "Time (months)", ylab = "Survival")
+
+#   -Biopsy patients, by cluster
+cluster_px_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = pxCompleteSurvData)
+print(cluster_px_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_px_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+
+#   -Biopsy patients, by clin_diag
+clin_px_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = pxCompleteSurvData)
+print(clin_px_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_px_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resection patients</h3>
+```{r}
+# Obtain and attach data set
+resCompleteSurvData <- subset(completeSurvData, type_probe == "r")
+
+# Resected patients
+res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ 1, data = resCompleteSurvData) 
+print(res_PcbilSurvFit, print.rmean = TRUE)
+
+plot(res_PcbilSurvFit,  main = "KM - Restion", xlab = "Time (months)", ylab = "Survival")
+
+#   -Resected patients, by cluster
+cluster_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = resCompleteSurvData)
+print(cluster_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+
+#   -Resected patients, by clin_diag
+clin_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = resCompleteSurvData)
+print(clin_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+
+```
+
+<h3>Resected HCC patients</h3>
+```{r}
+# Obtain and attach data set
+hccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Hepatocellular Cancer")
+
+#   -Resected HCC patients, by cluster
+cluster_hcc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = hccResCompleteSurvData)
+print(cluster_hcc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_hcc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected ICC patients</h3>
+```{r}
+# Obtain and attach data set
+iccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Intrahepatic Cholangiocarcinoma")
+
+#   -Resected ICC patients, by cluster
+cluster_icc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = iccResCompleteSurvData)
+print(cluster_icc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_icc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected Perihilar CCC patients</h3>
+```{r}
+# Obtain and attach data set
+phccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Perihilary Ac")
+
+#   -Resected Perihilar CCC patients, by cluster
+cluster_phcc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = phccResCompleteSurvData)
+print(cluster_phcc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_phcc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+
+<h3>Resected GB patients</h3>
+```{r}
+# Obtain and attach data set
+gbResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Gallbladder Ac")
+
+#   -Resected GB patients, by cluster
+cluster_gb_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = gbResCompleteSurvData)
+print(cluster_gb_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_gb_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected DPAC patients</h3>
+```{r}
+# Obtain and attach data set
+dpacResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Pancreas Ac")
+
+#   -Resected DPAC patients, by cluster
+cluster_dpac_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = dpacResCompleteSurvData)
+print(cluster_dpac_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_dpac_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected Ampullary Carcinoma patients</h3>
+```{r}
+# Obtain and attach data set
+ampResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Ampulla Ac")
+
+#   -Resected Ampullary Carcinoma patients, by cluster
+cluster_amp_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = ampResCompleteSurvData)
+print(cluster_amp_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(cluster_amp_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients in hcc-tuc</h3>
+```{r}
+# Obtain and attach data set
+hcctucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & cluster == "hcc-tuc")
+
+#   -Resected -tuc patients, by clin_diag
+clin_hcctuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = hcctucResCompleteSurvData)
+print(clin_hcctuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_hcctuc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients in icc-tuc</h3>
+```{r}
+# Obtain and attach data set
+icctucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & cluster == "intrahepatic-ccc-tuc")
+
+#   -Resected -tuc patients, by clin_diag
+clin_icctuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = icctucResCompleteSurvData)
+print(clin_icctuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_icctuc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients in extrahepatic-pcbil-tuc</h3>
+```{r}
+# Obtain and attach data set
+ehpcbiltucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & cluster == "extrahepatic-pcbil-tuc")
+
+#   -Resected -tuc patients, by clin_diag
+clin_ehpcbiltuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = ehpcbiltucResCompleteSurvData)
+print(clin_ehpcbiltuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_ehpcbiltuc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients in intestinal-tuc</h3>
+```{r}
+# Obtain and attach data set
+inttucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & cluster == "intestinal-tuc")
+
+#   -Resected -tuc patients, by clin_diag
+clin_inttuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = inttucResCompleteSurvData)
+print(clin_inttuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(clin_inttuc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+
+<h3>Resected patients extrahepatic-pcbil-tuc vs intestinal-tuc</h3>
+```{r}
+# Obtain and attach data set
+int_ehpcbiltucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (cluster == "extrahepatic-pcbil-tuc" | cluster == "intestinal-tuc"))
+
+#   -Resected -tuc patients, by clin_diag
+int_ehpcbiltuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = int_ehpcbiltucResCompleteSurvData)
+print(int_ehpcbiltuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(int_ehpcbiltuc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients intrahepatic vs perihilar</h3>
+```{r}
+# Obtain and attach data set
+ph_iccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Intrahepatic Cholangiocarcinoma" | clin_diag == "Perihilary Ac"))
+
+#   -Resected ICC patients, by cluster
+ph_icc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = ph_iccResCompleteSurvData)
+print(ph_icc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(ph_icc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients pancreas vs perihilar</h3>
+```{r}
+# Obtain and attach data set
+pdac_phResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Pancreas Ac" | clin_diag == "Perihilary Ac"))
+
+#   -Resected ICC patients, by cluster
+pdac_ph_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = pdac_phResCompleteSurvData)
+print(pdac_ph_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(pdac_ph_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients intrahepatic vs hcc</h3>
+```{r}
+# Obtain and attach data set
+hcc_iccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Intrahepatic Cholangiocarcinoma" | clin_diag == "Hepatocellular Cancer"))
+
+#   -Resected ICC patients, by cluster
+hcc_icc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = hcc_iccResCompleteSurvData)
+print(hcc_icc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(hcc_icc_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```
+
+<h3>Resected patients gb vs perihilar</h3>
+```{r}
+# Obtain and attach data set
+gb_phResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Gallbladder Ac" | clin_diag == "Perihilary Ac"))
+
+#   -Resected ICC patients, by cluster
+gb_ph_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = gb_phResCompleteSurvData)
+print(gb_ph_res_PcbilSurvFit, print.rmean = TRUE)
+
+survplot(gb_ph_res_PcbilSurvFit, conf = c("none","bands","bars")[1], xlab = "Time (months)", ylab = "Survival", time.inc = 10)
+```

@@ -1,0 +1,313 @@
+Immunoprofiling of adenocarcinomas of the pancreatobiliary tree
+===============================================================
+Survival analysis
+===============================================================
+
+Import needed libs
+```{r}
+library(survival)
+library(pastecs)
+library(rms)
+library(AICcmodavg)
+```
+
+Configure file names and paths
+```{r}
+workDir <- "~/Workspace/research/pcbil" 
+completeUniqueFinalSurvDataFileName <- paste(workDir, "/da/survival_analysis/completeUniqueFinalSurvData.csv", sep="")
+```
+
+Import complete survival data
+```{r}
+completeSurvData <- read.csv(file = completeUniqueFinalSurvDataFileName)
+completeSurvData$date_birth <- as.Date(completeSurvData$date_birth)
+completeSurvData$date_pad <- as.Date(completeSurvData$date_pad)
+completeSurvData$date_death <- as.Date(completeSurvData$date_death)
+
+# Remove unclassified-tucs, as this is not a real cluster
+table(completeSurvData$cluster, useNA = "always")
+completeSurvData[ completeSurvData$cluster == "unclassified-tucs", c("cluster") ] <- NA
+completeSurvData$cluster <- droplevels(completeSurvData$cluster)
+table(completeSurvData$cluster, useNA = "always")
+
+
+# Integrity check
+str(completeSurvData)
+summary(completeSurvData$surv_time) # one patient (109) died before pad
+round(stat.desc(completeSurvData$surv_time, basic =  FALSE, norm = TRUE), digits=3)
+```
+
+<h1>Significance tests for survival</h1>
+
+<h2>All patients</h2>
+```{r}
+# Relevel so pancreas is baseline category for cox and hr estimates
+completeSurvData$clin_diag <- relevel(completeSurvData$clin_diag, "Pancreas Ac")
+
+#   -All, biopsy vs resection
+bx_resPcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ type_probe, data = completeSurvData) 
+print(bx_resPcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ type_probe, rho=0, data = completeSurvData)
+survdiff(Surv(surv_time, death_observed) ~ type_probe, rho=1, data = completeSurvData)
+
+# Univariate Cox proportional hazards regression model.
+probetype_coxModel <- coxph(Surv(surv_time, death_observed) ~ type_probe, data = completeSurvData)
+summary(probetype_coxModel)
+    
+#   -All, by cluster
+cluster_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = completeSurvData)
+print(cluster_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=0, data = completeSurvData)
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=1, data = completeSurvData)
+
+# Univariate Cox proportional hazards regression model.
+cluster_coxModel <- coxph(Surv(surv_time, death_observed) ~ cluster, data = completeSurvData)
+summary(cluster_coxModel)
+
+#   -All, by clin_diag
+clin_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = completeSurvData)
+print(clin_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = completeSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = completeSurvData)
+
+# Univariate Cox proportional hazards regression model.
+clindiag_coxModel <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = completeSurvData)
+summary(clindiag_coxModel)
+```
+
+<h2>Biopsy patients</h2>
+```{r}
+# Obtain and attach data set
+pxCompleteSurvData <- subset(completeSurvData, type_probe == "b")
+
+# Relevel so pancreas is baseline category for cox and hr estimates
+pxCompleteSurvData$clin_diag <- relevel(pxCompleteSurvData$clin_diag, "Pancreas Ac")
+
+#   -Biopsy patients, by cluster
+cluster_px_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = pxCompleteSurvData)
+print(cluster_px_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=0, data = pxCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=1, data = pxCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+pxcluster_coxModel <- coxph(Surv(surv_time, death_observed) ~ cluster, data = pxCompleteSurvData)
+summary(pxcluster_coxModel)
+
+#   -Biopsy patients, by clin_diag
+clin_px_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = pxCompleteSurvData)
+print(clin_px_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = pxCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = pxCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+pxclindiag_coxModel <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = pxCompleteSurvData)
+summary(pxclindiag_coxModel)
+```
+
+<h3>Resection patients</h3>
+```{r}
+# Obtain and attach data set
+resCompleteSurvData <- subset(completeSurvData, type_probe == "r")
+
+# Relevel so pancreas is baseline category for cox and hr estimates
+resCompleteSurvData$clin_diag <- relevel(resCompleteSurvData$clin_diag, "Pancreas Ac")
+
+#   -Resected patients, by cluster
+cluster_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = resCompleteSurvData)
+print(cluster_res_PcbilSurvFit, print.rmean = TRUE)
+
+# log-rank or Mantel-Haenszel test
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=0, data = resCompleteSurvData)
+# Peto & Peto modification of the Gehan-Wilcoxon test
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=1, data = resCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+clm1 <- coxph(Surv(surv_time, death_observed) ~ cluster, data = resCompleteSurvData)
+summary(clm1)
+#Test the Proportional Hazards Assumption of a Cox Regression
+cox.zph(clm1)
+# Assessment of multicollinearity (VIF > 4 indicates problem)
+vif(clm1)
+# Adjusted Akaike information criterion, Bayesian information criteria. The smaller the AIC or BIC, the better the fit.
+AICc(clm1, return.K = FALSE, second.ord = TRUE)
+BIC(clm1)
+
+# Multivariate Cox proportional hazards regression model.
+clm2 <- coxph(Surv(surv_time, death_observed) ~ cluster + p_t + age_pad, data = resCompleteSurvData)
+summary(clm2)
+# Test the Proportional Hazards Assumption of a Cox Regression
+cox.zph(clm2)
+# Assessment of multicollinearity (VIF > 4 indicates problem)
+vif(clm2)
+# Adjusted Akaike information criterion, Bayesian information criteria. The smaller the AIC or BIC, the better the fit.
+AICc(clm2, return.K = FALSE, second.ord = TRUE)
+BIC(clm2)
+
+# ANOVA for model comparison
+anova(clm1, clm2)
+
+###################################################3
+#   -Resected patients, by clin_diag
+clin_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = resCompleteSurvData)
+print(clin_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = resCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = resCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+dgm1 <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = resCompleteSurvData)
+summary(dgm1)
+#Test the Proportional Hazards Assumption of a Cox Regression
+cox.zph(dgm1)
+# Assessment of multicollinearity (VIF > 4 indicates problem)
+vif(dgm1)
+# Adjusted Akaike information criterion, Bayesian information criteria. The smaller the AIC or BIC, the better the fit.
+AICc(dgm1, return.K = FALSE, second.ord = TRUE)
+BIC(dgm1)
+
+# Multivariate Cox proportional hazards regression model.
+dgm2 <- coxph(Surv(surv_time, death_observed) ~ clin_diag + p_t + age_pad, data = resCompleteSurvData)
+summary(dgm2)
+# Test the Proportional Hazards Assumption of a Cox Regression
+cox.zph(dgm2)
+# Assessment of multicollinearity (VIF > 4 indicates problem)
+vif(dgm2)
+# Adjusted Akaike information criterion, Bayesian information criteria. The smaller the AIC or BIC, the better the fit.
+AICc(dgm2, return.K = FALSE, second.ord = TRUE)
+BIC(dgm2)
+
+# ANOVA for model comparison
+anova(dgm1, dgm2)
+
+# AIC/BIC are smaller for cluster cox models than for anatomic loation (for the same data), which indicates a better fit (Is it a valid conclussion???)
+
+```
+
+
+<h3>Resected ICC patients</h3>
+```{r}
+# Obtain and attach data set
+iccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & clin_diag == "Intrahepatic Cholangiocarcinoma")
+
+#   -Resected ICC patients, by cluster
+cluster_icc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = iccResCompleteSurvData)
+print(cluster_icc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=0, data = iccResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=1, data = iccResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+iccres_coxModel <- coxph(Surv(surv_time, death_observed) ~ cluster, data = iccResCompleteSurvData)
+summary(iccres_coxModel)
+```
+
+
+<h3>Resected patients in extrahepatic-pcbil-tuc</h3>
+```{r}
+# Obtain and attach data set
+ehpcbiltucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & cluster == "extrahepatic-pcbil-tuc")
+
+# Relevel so pancreas is baseline category for cox and hr estimates
+ehpcbiltucResCompleteSurvData$clin_diag <- relevel(ehpcbiltucResCompleteSurvData$clin_diag, "Pancreas Ac")
+
+#   -Resected -tuc patients, by clin_diag
+clin_ehpcbiltuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = ehpcbiltucResCompleteSurvData)
+print(clin_ehpcbiltuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = ehpcbiltucResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = ehpcbiltucResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+ehpcbilres_coxModel <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = ehpcbiltucResCompleteSurvData)
+summary(ehpcbilres_coxModel)
+```
+
+<h3>Resected patients extrahepatic-pcbil-tuc vs intestinal-tuc</h3>
+```{r}
+# Obtain and attach data set
+int_ehpcbiltucResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (cluster == "extrahepatic-pcbil-tuc" | cluster == "intestinal-tuc"))
+
+#   -Resected -tuc patients, by clin_diag
+int_ehpcbiltuc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ cluster, data = int_ehpcbiltucResCompleteSurvData)
+print(int_ehpcbiltuc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=0, data = int_ehpcbiltucResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ cluster, rho=1, data = int_ehpcbiltucResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+pcbilint_coxModel <- coxph(Surv(surv_time, death_observed) ~ cluster, data = int_ehpcbiltucResCompleteSurvData)
+summary(pcbilint_coxModel)
+```
+
+<h3>Resected patients intrahepatic vs perihilar</h3>
+```{r}
+# Obtain and attach data set
+ph_iccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Intrahepatic Cholangiocarcinoma" | clin_diag == "Perihilary Ac"))
+
+#   -Resected ICC patients, by cluster
+ph_icc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = ph_iccResCompleteSurvData)
+print(ph_icc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = ph_iccResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = ph_iccResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+phicc_coxModel <- coxph(Surv(surv_time, death_observed) ~ cluster, data = ph_iccResCompleteSurvData)
+summary(phicc_coxModel)
+```
+
+<h3>Resected patients pancreas vs perihilar</h3>
+```{r}
+# Obtain and attach data set
+pdac_phResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Pancreas Ac" | clin_diag == "Perihilary Ac"))
+
+#   -Resected ICC patients, by cluster
+pdac_ph_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = pdac_phResCompleteSurvData)
+print(pdac_ph_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = pdac_phResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = pdac_phResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+pdacphres_coxModel <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = pdac_phResCompleteSurvData)
+summary(pdacphres_coxModel)
+```
+
+<h3>Resected patients intrahepatic vs hcc</h3>
+```{r}
+# Obtain and attach data set
+hcc_iccResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Intrahepatic Cholangiocarcinoma" | clin_diag == "Hepatocellular Cancer"))
+
+#   -Resected ICC patients, by cluster
+hcc_icc_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = hcc_iccResCompleteSurvData)
+print(hcc_icc_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = hcc_iccResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = hcc_iccResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+hcciccres_coxModel <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = hcc_iccResCompleteSurvData)
+summary(hcciccres_coxModel)
+```
+
+<h3>Resected patients gb vs perihilar</h3>
+```{r}
+# Obtain and attach data set
+gb_phResCompleteSurvData <- subset(completeSurvData, type_probe == "r" & (clin_diag == "Gallbladder Ac" | clin_diag == "Perihilary Ac"))
+
+#   -Resected ICC patients, by cluster
+gb_ph_res_PcbilSurvFit <- npsurv(formula = Surv(surv_time, death_observed) ~ clin_diag, data = gb_phResCompleteSurvData)
+print(gb_ph_res_PcbilSurvFit, print.rmean = TRUE)
+
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=0, data = gb_phResCompleteSurvData)
+survdiff(Surv(surv_time, death_observed) ~ clin_diag, rho=1, data = gb_phResCompleteSurvData)
+
+# Univariate Cox proportional hazards regression model.
+gbphres_coxModel <- coxph(Surv(surv_time, death_observed) ~ clin_diag, data = gb_phResCompleteSurvData)
+summary(gbphres_coxModel)
+```
