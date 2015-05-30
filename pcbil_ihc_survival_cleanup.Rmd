@@ -58,8 +58,10 @@ sum(is.na(finalSurvData$date_pad))
 # type probe
 levels(finalSurvData$type_probe)
 table(finalSurvData$type_probe, useNA = "always")
+# Fix a missing value (checked)
+finalSurvData$type_probe[finalSurvData$pad == "Hepatocellular Cancer|T1084/12"] <- "b" 
+# Fix typo
 finalSurvData$type_probe[finalSurvData$type_probe == "r "]  <- "r"
-finalSurvData$type_probe[finalSurvData$type_probe == ""]  <- NA
 finalSurvData$type_probe <- droplevels(finalSurvData$type_probe)
 levels(finalSurvData$type_probe)
 table(finalSurvData$type_probe, useNA = "always")
@@ -273,7 +275,7 @@ head(realPadsAll)
 colnames(realPadsAll) <- c("pad", "anon_pad", "clin_diag", "cluster") # modify column names for a neat merge
 head(realPadsAll)
 
-completeUniqueFinalSurvData <- merge(uniqueFinalSurvData, realPadsAll[, c(1,3,4)], by = "pad")
+completeUniqueFinalSurvData <- merge(uniqueFinalSurvData, realPadsAll, by = "pad")
 completeUniqueFinalSurvData <- completeUniqueFinalSurvData[, !(colnames(completeUniqueFinalSurvData) %in% c("comments","na.strings"))]
 ```
 
